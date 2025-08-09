@@ -1,10 +1,11 @@
+import "./config/env"; // Load environment before anything else
 import express, { Express, Router } from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
-// import userRouter from "./routes/userRoutes.js";
+import { checkConnection } from "./config/db";
+import userRouter from "./routes/userRoutes";
 
-dotenv.config();
+
 const app: Express = express();
 const port = process.env.PORT || 3000;
 const CORS_OPTIONS = {
@@ -21,10 +22,11 @@ const routes: Router = express.Router();
 app.use( cors( CORS_OPTIONS ) );
 app.use( express.json() );
 app.use( express.urlencoded( { extended: true } ) );
+checkConnection();
 app.get( "/api/health", ( req: Request, res: Response ) => {
     res.status( 200 ).send( "App is running fine" );
 } );
-// app.use( "/api/v1", userRouter );
+app.use( "/api/v1", userRouter );
 app.listen( port, () => {
     console.log( `app is listeing to port ${port}` )
 } )

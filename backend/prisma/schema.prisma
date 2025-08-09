@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  // output   = "../generated/prisma"
 }
 
 datasource db {
@@ -14,18 +14,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User{
-  id Int @id@default(autoincrement())
-  username String
-  email String @unique
-  password String
-  Avatar String? @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String
+  email     String   @unique
+  password  String
+  Avatar    String?  @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  role Role @default(USER)
+  role      Role     @default(USER)
 }
 
-enum Role{
+enum Role {
   USER
   ADMIN
 }

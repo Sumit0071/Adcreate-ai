@@ -2,22 +2,23 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 const authMiddleware = async ( req: Request, res: Response, next: NextFunction ) => {
     try {
-        const token = req.headers.authorization?.split( ' ' )[1];
-        if ( !token ) {
-            return res.status( 401 ).json( {
-                message: 'Unauthorized:user is not defined',
-                success: false
-            } );
-
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({
+                message: "Unauthorized: Token not provided or invalid format",
+                success: false,
+            });
         }
-        const decode = jwt.verify( token, process.env.JWT_SECRET as string );
+
+        const token = authHeader.split(" ")[1];
+        const decode = jwt.verify( token, process.env.JWT_SECRET as string ) as { id: string };
         if ( !decode ) {
             return res.status( 401 ).json( {
                 message: 'Unauthorized:token is not valid',
                 success: false
             } );
         }
-        // req.id = decode.userId;
+        (req as any).id = decode.id;
         next();
     }
     catch ( error ) {
