@@ -58,6 +58,12 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
         // Generate JWT token
         const token = jwt.sign( { id: newUser.id }, process.env.JWT_SECRET as string, { expiresIn: '1h' } );
 
+        res.cookie( 'token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // Set to true in production
+            maxAge: 3600000, // 1 hour
+            sameSite: 'strict', // Helps prevent CSRF attacks           
+        } )
         res.status( 201 ).json( {
             message: "User registered successfully",
             success: true,
@@ -67,8 +73,7 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
                 email: newUser.email,
                 role: newUser.role,
                 Avatar: newUser.Avatar,
-            },
-            token,
+            }
         } );
     } catch ( error ) {
         console.error( "Error in registerUser:", error );
@@ -111,16 +116,23 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
         // Generate JWT token
         const token = jwt.sign( { id: user.id }, process.env.JWT_SECRET as string, { expiresIn: '1h' } );
 
-        res.header( "Authorization", `Bearer ${token}` )
-            .status( 200 ).json( {
-                message: "User logged in successfully",
-                success: true,
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    email: user.email,
-                },
-            } );
+        // Set the token as a secure, HttpOnly cookie
+        res.cookie( 'token', token, {
+            httpOnly: true, // Prevents client-side JS from accessing the cookie
+            secure: process.env.NODE_ENV === 'production', // Ensures cookie is only sent over HTTPS
+            sameSite: 'strict', // Helps protect against CSRF attacks
+            maxAge: 3600000, // 1 hour expiration in milliseconds
+        } );
+        res.status( 200 ).json( {
+            message: "User logged in successfully",
+            success: true,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                Avatar: user.Avatar,
+            },
+        } );
     } catch ( error ) {
         console.error( "Error in loginUser:", error );
         res.status( 500 ).json( {
