@@ -17,14 +17,16 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   username  String
-  email     String   @unique
-  password  String
+  email     String    
+  password  String   
   Avatar    String?  @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   role      Role     @default(USER)
-businessProfiles BusinessProfile[]
-whatsAppChats   WhatsAppChat[]
+  googleId String?       @unique
+  plan      Plan     @default(BASIC)
+  businessProfiles BusinessProfile[]
+  whatsAppChats   WhatsAppChat[]
 }
 
 model BusinessProfile{
@@ -70,4 +72,9 @@ enum ContentType {
   IMAGE
   VIDEO
   DOCUMENT
+}
+enum Plan{
+  BASIC
+  PREMIUM
+  ENTERPRISE
 }
