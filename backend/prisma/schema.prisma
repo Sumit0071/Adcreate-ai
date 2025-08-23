@@ -1,0 +1,80 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String
+  email     String    
+  password  String   
+  Avatar    String?  @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @default(USER)
+  googleId String?       @unique
+  plan      Plan     @default(BASIC)
+  businessProfiles BusinessProfile[]
+  whatsAppChats   WhatsAppChat[]
+}
+
+model BusinessProfile{
+id Int @id @default(autoincrement())
+businessName   String
+  niche          String
+  productService String
+  targetAudience String
+  adGoal         String   // e.g., "Brand Awareness", "Lead Generation"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId Int
+  user User @relation(fields: [userId], references: [id])
+}
+
+model WhatsAppChat{
+   id          Int      @id @default(autoincrement())
+  waMessageId String   @unique           // ID from WhatsApp API (to avoid duplicates)
+  senderName  String                    // Display name of sender
+  senderType  SenderType                 // "CLIENT" or "BUSINESS"
+  phoneNumber String                     // Sender's phone (could be used to link to a lead)
+  contentType ContentType                // TEXT, IMAGE, VIDEO, DOCUMENT, etc.
+  messageText String?                    // For text messages
+  mediaUrl    String?                    // If message contains media
+  timestamp   DateTime                   // Original message time
+
+  // Relation to user
+  userId Int
+  user   User     @relation(fields: [userId], references: [id])
+}
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SenderType {
+  CLIENT
+  BUSINESS
+}
+
+enum ContentType {
+  TEXT
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+enum Plan{
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
