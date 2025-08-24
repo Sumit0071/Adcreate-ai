@@ -1,0 +1,3 @@
+const generateAdsecquence = async (data) => {
+    
+}
