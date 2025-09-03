@@ -16,6 +16,7 @@
   "license": "ISC",
   "keywords": [],
   "dependencies": {
+    "@google/genai": "^1.16.0",
     "@prisma/client": "^6.13.0",
     "@prisma/extension-accelerate": "^2.0.2",
     "bcryptjs": "^3.0.2",
