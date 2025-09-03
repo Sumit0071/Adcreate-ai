@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { getUserProfile } from "./api/user";
 import AuthModal from "@/components/Auth/AuthModal";
 
+
 export default function Home() {
   const [isOpen, setIsOpen] = useState( false );
   const [showAuth, setShowAuth] = useState( false );
@@ -50,7 +51,7 @@ export default function Home() {
           <NavItems items={navItems} />
           {!user ? (
             <NavbarButton variant="dark" onClick={() => setShowAuth( true )}>
-              Sign Up / Login
+              Sign Up
             </NavbarButton>
           ) : (
             <div className="flex items-center cursor-pointer">

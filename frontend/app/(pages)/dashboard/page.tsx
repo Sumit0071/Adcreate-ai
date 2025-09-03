@@ -11,12 +11,27 @@ import {
   MobileNavMenu,
   MobileNavToggle,
 } from "@/components/ui/resizable-navbar";
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { Building2, Tags, Package, Users, Target } from "lucide-react";
+import { getUserProfile } from "@/app/api/user";
 
 export default function DashboardPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [user, setUser] = useState<any>( null );
+  const [showAuth, setShowAuth] = useState( false );
+
+  useEffect( () => {
+    const fetchUserProfile = async () => {
+      try {
+        const userData = await getUserProfile();
+        setUser( userData );
+      } catch ( error ) {
+        console.error( "Error fetching user profile:", error );
+      }
+    };
+    fetchUserProfile();
+  }, [] );
 
   const navItems = [
     { name: "Home", link: "/" },
@@ -72,6 +87,8 @@ export default function DashboardPage() {
     }
   };
 
+ 
+
   return (
     <div className="min-h-[700px] bg-gradient-to-br from-gray-100 via-white to-gray-100 ">
       {/* Navbar */}
@@ -79,7 +96,19 @@ export default function DashboardPage() {
         <NavBody>
           <NavbarLogo />
           <NavItems items={navItems} />
-          <NavbarButton variant="primary">Sign Out</NavbarButton>
+          {!user ? (
+                     <NavbarButton variant="dark" onClick={() => setShowAuth( true )}>
+                       Sign Up
+                     </NavbarButton>
+                   ) : (
+                     <div className="flex items-center cursor-pointer">
+                       <img
+                         src={user?.user.Avatar || "/default-avatar.png"}
+                         alt={user?.user.username || "User"}
+                         className="w-10 h-10 rounded-full border cursor-pointer"
+                       />
+                     </div>
+                   )}
         </NavBody>
 
         <MobileNav>
