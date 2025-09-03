@@ -14,7 +14,7 @@ import { Footer } from "@/components/ui/footer";
 import { useState, useEffect } from "react";
 import { getUserProfile } from "./api/user";
 import AuthModal from "@/components/Auth/AuthModal";
-
+import UserMenu from "@/components/ui/UserMenu";
 
 export default function Home() {
   const [isOpen, setIsOpen] = useState( false );
@@ -54,13 +54,7 @@ export default function Home() {
               Sign Up
             </NavbarButton>
           ) : (
-            <div className="flex items-center cursor-pointer">
-              <img
-                src={user?.user.Avatar || "/default-avatar.png"}
-                alt={user?.user.username || "User"}
-                className="w-10 h-10 rounded-full border cursor-pointer"
-              />
-            </div>
+            <UserMenu user={user} />
           )}
         </NavBody>
 

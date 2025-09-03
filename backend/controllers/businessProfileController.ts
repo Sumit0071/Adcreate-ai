@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
-import { generateAdsecquence } from "../utils/adCreativeGenerator";
+import { generateAdsequence, AdData } from "../utils/adCreativeGenerator";
 const prisma = new PrismaClient();
 export const addBusinessDetails = async ( req: Request, res: Response ): Promise<void> => {
     try {
@@ -71,16 +71,22 @@ export const generateAdsecquenceController = async ( req: Request, res: Response
             where: { userId: req.body.userId },
         } );
 
-        if ( !data ) {
-            res.status( 404 ).json( {
-                error: "Business profile not found",
-                success: false
-            } );
-            return;
-        }
-
-        const sequence = await generateAdsecquence( data );
-        res.status( 200 ).json( {
+if ( !data ) {
+    res.status( 404 ).json( {
+        error: "Business profile not found",
+        success: false
+    } );
+    return;
+}
+const requiredData: AdData = {
+    businessname: data.businessName,
+    niche: data.niche,
+    productService: data.productService,
+    targetAudience: data.targetAudience,
+    adGoal: data.adGoal
+};
+const sequence = await generateAdsequence( requiredData );
+res.status( 200 ).json( {
             message: "Ad sequence generated successfully",
             success: true,
             sequence
