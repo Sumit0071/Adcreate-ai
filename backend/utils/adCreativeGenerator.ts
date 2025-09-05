@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import * as fs from "node:fs";
 
 export interface AdData {
@@ -10,74 +10,109 @@ export interface AdData {
 }
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
-if ( !geminiApiKey ) {
-  throw new Error( "❌ Gemini API key is not set in environment variables." );
+if (!geminiApiKey) {
+  throw new Error("❌ Gemini API key is not set in environment variables.");
 }
 
-const ai = new GoogleGenAI( { apiKey: geminiApiKey } );
+const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-export const generateAdsequence = async ( data: AdData ) => {
-  try {
-    const { businessname, niche, productService, adGoal, targetAudience } = data;
+// Helper: wait function
+const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-    // 📝 Polished prompt with clarity
-    const prompt = `
-    Create a **Facebook ad** for the business: "${businessname}".
-
-    - Niche: ${niche}
-    - Product/Service: ${productService}
-    - Goal: ${adGoal}
-    - Target Audience: ${targetAudience}
-
-    Requirements:
-    - Engaging, persuasive copy (headline + body text + CTA).
-    - Professional, modern style suitable for startups & SMEs.
-    - Generate both: 
-        1. The ad copy (text).
-        2. A Facebook ad creative (image).
-    `;
-
-    const response = await ai.models.generateContent( {
-      model: "gemini-2.5-flash-image-preview",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    } );
-
-    if ( !response.candidates?.length ) {
-      console.warn( "⚠️ No response candidates from Gemini." );
-      return;
+// Generic retry wrapper
+async function withRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+  while (retries > 0) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.status === 429) {
+        const retryDelay =
+          error.retryDelay ? parseInt(error.retryDelay) * 1000 : 15000;
+        console.warn(`⚠️ Rate limited. Retrying in ${retryDelay / 1000}s...`);
+        await wait(retryDelay);
+        retries--;
+      } else {
+        throw error;
+      }
     }
+  }
+  throw new Error("❌ Failed after multiple retries due to rate limits.");
+}
 
-    const candidate = response.candidates[0];
-    const parts = candidate.content?.parts || [];
+export const generateAdsequence = async (data: AdData) => {
+  const { businessname, niche, productService, adGoal, targetAudience } = data;
 
-    let adCopy = "";
-    let imageSaved = false;
+  // Step 1: Generate ad copy (text)
+  const textPrompt = `
+  Create a **Facebook ad copy** for the business: "${businessname}".
+  - Niche: ${niche}
+  - Product/Service: ${productService}
+  - Goal: ${adGoal}
+  - Target Audience: ${targetAudience}
 
-    for ( const part of parts ) {
-      if ( part.text ) {
-        adCopy += part.text + "\n";
-      } else if ( part.inlineData?.data ) {
-        try {
-          const buffer = Buffer.from( part.inlineData.data, "base64" );
-          const fileName = "facebook-ad-creative.png";
-          fs.writeFileSync( fileName, buffer );
-          console.log( `✅ Image saved as ${fileName}` );
-          imageSaved = true;
-        } catch ( err ) {
-          console.error( "❌ Failed to save image:", err );
-        }
+  Requirements:
+  - Provide Headline, Body text, and CTA.
+  - Make it persuasive & professional.
+  `;
+
+  const textResponse = await withRetry(() =>
+    ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: textPrompt,
+    })
+  );
+
+  let adCopy = "";
+  const textParts = textResponse.candidates?.[0]?.content?.parts ?? [];
+  for (const part of textParts) {
+    if (part.text) {
+      adCopy += part.text + "\n";
+    }
+  }
+  adCopy = adCopy.trim();
+
+  if (adCopy) {
+    console.log("\n📢 Generated Ad Copy:\n");
+    console.log(adCopy);
+  } else {
+    console.warn("⚠️ No ad copy generated.");
+  }
+
+  // Step 2: Generate ad creative (image)
+  const imagePrompt = `
+  Design a **Facebook ad creative** for "${businessname}".
+  - It should visually represent: ${productService}
+  - Style: modern, professional, and eye-catching.
+  - Suitable for ${targetAudience}.
+  `;
+
+  let imageSaved = false;
+  try {
+    const imageResponse = await withRetry(() =>
+      ai.models.generateContent({
+        model: "gemini-2.5-flash-image-preview",
+        contents: imagePrompt,
+      })
+    );
+
+    const imageParts = imageResponse.candidates?.[0]?.content?.parts ?? [];
+    for (const part of imageParts) {
+      if (part.inlineData?.data) {
+        const buffer = Buffer.from(part.inlineData.data, "base64");
+        const fileName = "facebook-ad-creative.png";
+        fs.writeFileSync(fileName, buffer);
+        console.log(`✅ Image saved as ${fileName}`);
+        imageSaved = true;
       }
     }
 
-    if ( adCopy ) {
-      console.log( "\n📢 Generated Ad Copy:\n" );
-      console.log( adCopy.trim() );
+    if (!imageSaved) {
+      console.warn("⚠️ No image was generated by Gemini.");
     }
-
-    if ( !imageSaved ) {
-      console.log( "⚠️ No image was generated by Gemini." );
-    }
-  } catch ( error ) {
-    console.error( "❌ Error generating ad sequence:", error );
+  } catch (err: any) {
+    console.error(err);
+    console.warn("⚠️ Image generation skipped — quota exceeded or API error.");
   }
+
+  return { adCopy, imageSaved };
 };
