@@ -25,6 +25,7 @@ model User {
   role      Role     @default(USER)
   googleId String?       @unique
   plan      Plan     @default(BASIC)
+  // credits  Int      @default(10) // Default credits for new users
   businessProfiles BusinessProfile[]
   whatsAppChats   WhatsAppChat[]
 }
