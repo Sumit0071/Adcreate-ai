@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { ToastContainer, toast } from 'react-toastify';
 import { Eye, EyeClosed } from 'lucide-react';
 import Image from "next/image";
+import { GoogleLogin } from '@react-oauth/google';
+import { googleLogin, registerUser } from '@/app/api/user';
 const SignUp: React.FC<{ switchToLogin: () => void }> = ( { switchToLogin } ) => {
     const [isVisible, setIsVisible] = useState( false );
 
@@ -79,7 +81,7 @@ const SignUp: React.FC<{ switchToLogin: () => void }> = ( { switchToLogin } ) =>
 
                         </div>
 
-                        <Button type="submit" className="w-full bg-blue-500 text-white">
+                        <Button type="submit" className="w-full bg-blue-500 text-white" onClick={registerUser}>
                             Create Account
                         </Button>
                     </form>
@@ -109,10 +111,27 @@ const SignUp: React.FC<{ switchToLogin: () => void }> = ( { switchToLogin } ) =>
                     <div className="mt-6">
                         <div className="text-center text-sm text-gray-500 mb-2">Or sign up with</div>
                         <div className="flex justify-center gap-3">
-                            <Button variant="outline" className="bg-white text-gray-800 border-gray-300" onClick={() => { window.location.href = "http://localhost:5000/api/v1/auth/google" }}>
-                                <Image src="/google.png" alt="Google" width={20} height={20} />
-                                Google
-                            </Button>
+                            <GoogleLogin
+                                onSuccess={async ( credentialResponse ) => {
+                                    try {
+                                        const tokenId = credentialResponse.credential;
+                                        if ( !tokenId ) {
+                                            toast.error( "Google login failed" );
+                                            return;
+                                        }
+
+                                        const res = await googleLogin( tokenId );
+                                        toast.success( "Google login successful!" );
+                                        console.log( "Google user:", res );
+
+                                        window.location.href = "/dashboard"; // redirect after login
+                                    } catch ( err ) {
+                                        console.error( "Google login error:", err );
+                                        toast.error( "Google login failed" );
+                                    }
+                                }}
+                                onError={() => toast.error( "Google login failed" )}
+                            />
                             <Button variant="outline" className="bg-white text-gray-800 border-gray-300">
                                 Facebook
                             </Button>

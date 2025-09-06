@@ -31,7 +31,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         const { email, name, picture, sub: googleId } = payload;
 
         // Check if user already exists
-        let user = await prisma.user.findUnique({
+        let user = await prisma.user.findFirst({
             where: { email },
         });
 

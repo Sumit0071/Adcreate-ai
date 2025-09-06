@@ -26,6 +26,20 @@ export const UserSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
+export const RegisterSchema = UserSchema.pick({
+  username: true,
+  email: true,
+  password: true,
+  Avatar: true,
+  role: true,
+});
+
+export const LoginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+
 // ================= BusinessProfile Schema ================= //
 export const BusinessProfileSchema = z.object({
   id: z.number().int().positive().optional(),
