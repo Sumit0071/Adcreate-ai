@@ -28,7 +28,7 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
         const cloudResponse = await cloudinary.uploader.upload( fileUri.content as string );
 
         // Check if user already exists
-        const existingUser = await prisma.user.findFirst( {
+        const existingUser = await prisma.user.findUnique( {
             where: { email },
         } );
 
@@ -90,7 +90,7 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
         const { email, password } = req.body;
 
         // Find the user by email
-        const user = await prisma.user.findFirst( {
+        const user = await prisma.user.findUnique( {
             where: { email },
         } );
         if ( !user ) {

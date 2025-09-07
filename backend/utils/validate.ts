@@ -48,7 +48,6 @@ export const BusinessProfileSchema = z.object({
   productService: z.string().min(2, "Product/Service is required"),
   targetAudience: z.string().min(2, "Target audience is required"),
   adGoal: z.string().min(2, "Ad goal is required"),
-  userId: z.number().int().positive(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

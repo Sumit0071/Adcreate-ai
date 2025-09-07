@@ -10,7 +10,7 @@ import businessProfileRouter from "./routes/businessProfile.routes";
 const app: Express = express();
 const port = process.env.PORT || 3000;
 const CORS_OPTIONS = {
-    origin: `${process.env.FRONTEND_URL}`,
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
     credentials: true,
     optionsSuccessStatus: 204,// For legacy browser support

@@ -14,7 +14,7 @@ import Image from "next/image";
 import { loginUser } from "@/app/api/user";
 import { GoogleLogin } from "@react-oauth/google";
 import { googleLogin } from "@/app/api/user";
-
+import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 const Login: React.FC<{ switchToSignUp: () => void }> = ( { switchToSignUp } ) => {
   const [isVisible, setIsVisible] = useState( false );
   const [loading, setLoading] = useState( false );
@@ -129,7 +129,7 @@ const Login: React.FC<{ switchToSignUp: () => void }> = ( { switchToSignUp } ) =
               Or login with
             </div>
             <div className="flex justify-center gap-3">
-              <GoogleLogin
+              <GoogleLogin size="medium"
                 onSuccess={async ( credentialResponse ) => {
                   try {
                     const tokenId = credentialResponse.credential;
@@ -150,18 +150,8 @@ const Login: React.FC<{ switchToSignUp: () => void }> = ( { switchToSignUp } ) =
                 }}
                 onError={() => toast.error( "Google login failed" )}
               />
-              <Button
-                variant="outline"
-                className="bg-white text-gray-800 border-gray-300"
-              >
-                Facebook
-              </Button>
-              <Button
-                variant="outline"
-                className="bg-white text-gray-800 border-gray-300"
-              >
-                Twitter
-              </Button>
+           
+           
             </div>
           </div>
         </CardContent>
