@@ -17,7 +17,7 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   username  String
-  email     String    
+  email     String    @unique
   password  String   
   Avatar    String?  @default("https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y")
   createdAt DateTime @default(now())
@@ -25,7 +25,7 @@ model User {
   role      Role     @default(USER)
   googleId String?       @unique
   plan      Plan     @default(BASIC)
-  // credits  Int      @default(10) // Default credits for new users
+  credits  Int      @default(10) // Default credits for new users
   businessProfiles BusinessProfile[]
   whatsAppChats   WhatsAppChat[]
 }
@@ -41,8 +41,18 @@ businessName   String
   updatedAt      DateTime @updatedAt
   userId Int
   user User @relation(fields: [userId], references: [id])
+   ads    Ad[]
 }
 
+model Ad {
+  id                 Int      @id @default(autoincrement())
+  content            String   // generated ad text
+  imageUrl         String?
+  generatedAt        DateTime @default(now())
+  // relation
+  businessProfileId  Int
+  businessProfile    BusinessProfile @relation(fields: [businessProfileId], references: [id])
+}
 model WhatsAppChat{
    id          Int      @id @default(autoincrement())
   waMessageId String   @unique           // ID from WhatsApp API (to avoid duplicates)
