@@ -106,7 +106,7 @@ Business Context:
 - Goal: ${adGoal}
 - Target Audience: ${targetAudience}
 ${specialInstructions ? `- Special Instructions: ${specialInstructions}` : ""}
-${contextImage ? `- Use this image as inspiration/reference: ${contextImage}` : ""}
+${contextImage ? `- Use this image as inspiration/reference while generating the image: ${contextImage}` : ""}
 
 Banner Requirements:
 - Prominently display business name: "${businessname}"
@@ -122,7 +122,9 @@ Banner Requirements:
 
 General Design Guidelines:
 - Modern, professional, and visually striking
-- Include ${businessname} logo placeholder (top corner)
+- Include ${businessname} logo placeholder (top corner) or anywhere you usually place logos
+- Use high-quality, relevant imagery (avoid generic stock photos)
+- Colors that evoke the right emotions for ${targetAudience}
 - Bold, readable fonts with strong contrast
 - Optimized for Facebook ad dimensions (1200x628 px)
 - Clean layout that grabs attention but avoids clutter
