@@ -135,7 +135,7 @@ General Design Guidelines:
     const imageResponse = await withRetry( () =>
       ai.models.generateContent( {
         model: "gemini-2.5-flash-image-preview",
-        contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+        contents: [{ role: "user", parts: [{ text: imagePrompt }] }]
       } )
     );
 
@@ -158,10 +158,8 @@ General Design Guidelines:
   }
 
   return {
-    adCopies: adCopy
-      .split( /Option\s*\d*[:.-]?/i ) // split by "Option 1:", "Option 2 -" etc.
-      .map( str => str.trim() )
-      .filter( Boolean ), // remove empty entries
+    adCopies: adCopy.match( /(\*\*Option[\s\S]*?)(?=\n\*\*Option|\n\*\*Expert|$)/g ) || [],
     imageBase64: imageBuffer ? imageBuffer.toString( "base64" ) : null,
   };
+
 };

@@ -222,3 +222,25 @@ export const updateUserProfile = async ( req: Request, res: Response ): Promise<
         } );
     }
 };
+
+export const logoutUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      expires: new Date(0), // Expire immediately
+    });
+
+    res.status(200).json({
+      message: "User logged out successfully",
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error in logoutUser:", error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+    });
+  }
+};
