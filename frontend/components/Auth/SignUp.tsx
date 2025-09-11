@@ -11,35 +11,35 @@ import { ToastContainer, toast } from 'react-toastify';
 import { Eye, EyeClosed } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { googleLogin, registerUser } from '@/app/api/user';
+import FacebookLogin from '@greatsumini/react-facebook-login';
+const SignUp: React.FC<{ switchToLogin: () => void }> = ( { switchToLogin } ) => {
+  const [isVisible, setIsVisible] = useState( false );
+  const [loading, setLoading] = useState( false );
 
-const SignUp: React.FC<{ switchToLogin: () => void }> = ({ switchToLogin }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async ( e: React.FormEvent<HTMLFormElement> ) => {
     e.preventDefault();
 
     const form = e.currentTarget;
     const userData = {
-      username: (form.username as HTMLInputElement).value,
-      email: (form.email as HTMLInputElement).value,
-      password: (form.password as HTMLInputElement).value,
+      username: ( form.username as HTMLInputElement ).value,
+      email: ( form.email as HTMLInputElement ).value,
+      password: ( form.password as HTMLInputElement ).value,
       // Avatar: optional
     };
 
     try {
-      setLoading(true);
-      const res = await registerUser(userData);
-      toast.success('User registered successfully!');
-      console.log('Registered user:', res);
+      setLoading( true );
+      const res = await registerUser( userData );
+      toast.success( 'User registered successfully!' );
+      console.log( 'Registered user:', res );
 
       form.reset(); // reset the form
       // optionally redirect user here
-    } catch (err: any) {
-      console.error('Signup error:', err);
-      toast.error(err.response?.data?.message || 'Signup failed');
+    } catch ( err: any ) {
+      console.error( 'Signup error:', err );
+      toast.error( err.response?.data?.message || 'Signup failed' );
     } finally {
-      setLoading(false);
+      setLoading( false );
     }
   };
 
@@ -97,7 +97,7 @@ const SignUp: React.FC<{ switchToLogin: () => void }> = ({ switchToLogin }) => {
                   />
                   <button
                     type="button"
-                    onClick={() => setIsVisible(!isVisible)}
+                    onClick={() => setIsVisible( !isVisible )}
                     className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 cursor-pointer"
                     tabIndex={-1}
                   >
@@ -142,29 +142,39 @@ const SignUp: React.FC<{ switchToLogin: () => void }> = ({ switchToLogin }) => {
             <div className="text-center text-sm text-gray-500 mb-2">Or sign up with</div>
             <div className="flex justify-center gap-2">
               <GoogleLogin
-                onSuccess={async (credentialResponse) => {
+                onSuccess={async ( credentialResponse ) => {
                   try {
                     const tokenId = credentialResponse.credential;
-                    if (!tokenId) {
-                      toast.error('Google login failed');
+                    if ( !tokenId ) {
+                      toast.error( 'Google login failed' );
                       return;
                     }
 
-                    const res = await googleLogin(tokenId);
-                    toast.success('Google login successful!');
-                    console.log('Google user:', res);
+                    const res = await googleLogin( tokenId );
+                    toast.success( 'Google login successful!' );
+                    console.log( 'Google user:', res );
 
                     window.location.href = '/dashboard';
-                  } catch (err) {
-                    console.error('Google login error:', err);
-                    toast.error('Google login failed');
+                  } catch ( err ) {
+                    console.error( 'Google login error:', err );
+                    toast.error( 'Google login failed' );
                   }
                 }}
-                onError={() => toast.error('Google login failed')}
+                onError={() => toast.error( 'Google login failed' )}
               />
-              <Button variant="outline" className="bg-white text-gray-800 border-gray-300">
-                Facebook
-              </Button>
+              <FacebookLogin
+                appId={process.env.NEXT_PUBLIC_FACEBOOK_APP_ID!}
+                onSuccess={( response ) => {
+                  console.log( 'Login Success!', response );
+                }}
+                onFail={( error ) => {
+                  console.log( 'Login Failed!', error );
+                }}
+                onProfileSuccess={( response ) => {
+                  console.log( 'Get Profile Success!', response );
+                }}
+              />
+
             </div>
           </div>
         </CardContent>

@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@greatsumini/react-facebook-login": "^3.4.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -54,7 +55,6 @@
     "react-day-picker": "^9.9.0",
     "react-dom": "19.1.0",
     "react-facebook": "^10.0.1",
-    "react-facebook-login": "^4.1.1",
     "react-hook-form": "^7.62.0",
     "react-resizable-panels": "^3.0.5",
     "react-toastify": "^11.0.5",

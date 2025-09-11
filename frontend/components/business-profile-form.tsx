@@ -24,7 +24,7 @@ interface BusinessProfileFormProps {
   onBack: () => void
 }
 
-export function BusinessProfileCard({ onSubmit, onBack }: BusinessProfileFormProps) {
+export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormProps) {
   const [formData, setFormData] = useState<BusinessProfile>({
     businessName: "",
     niche: "",
