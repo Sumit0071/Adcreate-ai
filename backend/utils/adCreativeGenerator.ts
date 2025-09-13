@@ -71,6 +71,7 @@ Requirements:
 - Each option should feel unique.
 - Tone should directly appeal to ${targetAudience}.
 - Keep copy concise, persuasive, and optimized for Facebook ads.
+ NEVER use markdown formatting like *, **, _, __, #, or any other special characters for formatting
 `;
 
   const textResponse = await withRetry( () =>
@@ -158,7 +159,7 @@ General Design Guidelines:
   }
 
   return {
-    adCopies: adCopy.match( /(\*\*Option[\s\S]*?)(?=\n\*\*Option|\n\*\*Expert|$)/g ) || [],
+    // adCopies: adCopy.match(/(Option\s*\d+:[\s\S]*?)(?=\nOption\s*\d+:|$)/g) || [],
     imageBase64: imageBuffer ? imageBuffer.toString( "base64" ) : null,
   };
 
