@@ -27,7 +27,6 @@ import { BusinessProfileForm } from "@/components/business-profile-form"
 import { AdGenerationModal } from "@/components/ad-generation-modal"
 import { WhatsAppChatImport } from "@/components/whatsapp-chat-import"
 import Link from "next/link"
-
 interface BusinessProfile {
   businessName: string
   niche: string
@@ -43,14 +42,13 @@ export default function Home() {
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>( null )
   const [showAdModal, setShowAdModal] = useState( false )
   const [isAdmin, setIsAdmin] = useState( false ) // Added admin role state for demo
-  const { user, isLoggedIn, fetchUser, logout,hasFetched } = useAuthStore();
+  const { user, isLoggedIn, fetchUser, logout, hasFetched } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
-
-  useEffect(() => {
-    if (!hasFetched) {
+  useEffect( () => {
+    if ( !hasFetched ) {
       fetchUser(); // ✅ only run once
     }
-  }, [hasFetched, fetchUser]);
+  }, [hasFetched, fetchUser] );
 
   console.log( "User", user );
 
@@ -97,6 +95,7 @@ export default function Home() {
     <div className={`min-h-screen ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50"}`}>
       {/* Navbar */}
       <header className="fixed top-2 left-0 w-full z-50  h-15 ">
+         <div className="hidden md:block">
         <Navbar>
           <NavBody className="flex items-center justify-between px-6">
             <div className="flex items-center gap-x-6">
@@ -116,87 +115,115 @@ export default function Home() {
               )}
             </div>
           </NavBody>
-
-          {/* Mobile Navbar */}
-          <MobileNav>
-            <MobileNavHeader>
-              <NavbarLogo />
-              <MobileNavToggle
-                isOpen={isOpen}
-                onClick={() => setIsOpen( !isOpen )}
-              />
-            </MobileNavHeader>
-            <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen( false )}>
-              {navItems.map( ( item, idx ) => (
-                <a
-                  key={idx}
-                  href={item.link}
-                  className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
-                  onClick={() => setIsOpen( false )}
-                >
-                  {item.name}
-                </a>
-              ) )}
-              {!user ? (
-                <NavbarButton
-                  className="mt-4 w-full"
-                  variant="dark"
-                  onClick={() => setShowAuth( true )}
-                >
-                  Sign Up / Login
-                </NavbarButton>
-              ) : (
-                <NavbarButton className="mt-4 w-full" variant="dark">
-                  Sign Out
-                </NavbarButton>
-              )}
-            </MobileNavMenu>
-          </MobileNav>
         </Navbar>
+        </div>
+        {/* Mobile Navbar */}
+        <div className="block md:hidden">
+        <MobileNav>
+          <MobileNavHeader>
+            <NavbarLogo />
+            <MobileNavToggle
+              isOpen={isOpen}
+              onClick={() => setIsOpen( !isOpen )}
+            />
+          </MobileNavHeader>
+          <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen( false )}>
+            {navItems.map( ( item, idx ) => (
+              <a
+                key={idx}
+                href={item.link}
+                className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
+                onClick={() => setIsOpen( false )}
+              >
+                {item.name}
+              </a>
+            ) )}
+            {!user ? (
+              <NavbarButton
+                className="mt-4 w-full"
+                variant="dark"
+                onClick={() => setShowAuth( true )}
+              >
+                Sign Up / Login
+              </NavbarButton>
+            ) : (
+              <NavbarButton className="mt-4 w-full" variant="dark">
+                Sign Out
+              </NavbarButton>
+            )}
+          </MobileNavMenu>
+        </MobileNav>
+        </div>
       </header>
       {/* Auth Modal */}
       {showAuth && <AuthModal onClose={() => setShowAuth( false )} />}
 
-
       {/* Hero Section */}
       <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <Badge className="mb-6 bg-blue-100 text-blue-700 hover:bg-blue-100">
-            <Sparkles className="w-4 h-4 mr-1" />
-            AI-Powered Ad Generation
-          </Badge>
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 text-balance">
-            Create High-Converting Ads in
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600"> Seconds</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 text-pretty max-w-2xl mx-auto">
-            Transform your business profile into compelling ad campaigns with AI. Generate multiple ad variations,
-            custom images, and copy that converts—all tailored to your target audience.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
-              onClick={handleGetStarted}
-            >
-              Get Started Free
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0 hover:from-green-700 hover:to-emerald-700"
-              onClick={handleWhatsAppImport}
-            >
-              <MessageSquare className="w-5 h-5 mr-2" />
-              Import WhatsApp Chats
-            </Button>
-            <Button size="lg" variant="outline" className="px-8 py-3 bg-transparent">
-              Watch Demo
-            </Button>
+        <div className="container mx-auto max-w-6xl grid md:grid-cols-2 items-center gap-12">
+          {/* Left Content */}
+          <div className="text-center md:text-left">
+            <Badge className="mb-6 bg-blue-100 text-blue-700 hover:bg-blue-100">
+              <Sparkles className="w-4 h-4 mr-1" />
+              AI-Powered Ad Generation
+            </Badge>
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 text-balance">
+              Create High-Converting Ads in
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                {" "}Seconds
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 text-pretty max-w-2xl mx-auto md:mx-0">
+              Transform your business profile into compelling ad campaigns with AI.
+              Generate multiple ad variations, custom images, and copy that converts—all
+              tailored to your target audience.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
+                onClick={handleGetStarted}
+              >
+                Get Started Free
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0 hover:from-green-700 hover:to-emerald-700"
+                onClick={handleWhatsAppImport}
+              >
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Import WhatsApp Chats
+              </Button>
+              <Button size="lg" variant="outline" className="px-8 py-3 bg-transparent">
+                Watch Demo
+              </Button>
+            </div>
+          </div>
+
+          {/* Right Phone Mockup */}
+          <div className="flex justify-center md:justify-end">
+            <div className="w-48 h-96 md:w-64 md:h-[520px] bg-black rounded-[2.5rem] md:rounded-[3rem] p-2 shadow-xl">
+              <div
+                className={`w-full h-full bg-[#a3a5a5] rounded-[2rem] md:rounded-[2.5rem] relative overflow-hidden transition-all duration-500 flex flex-col items-center justify-center`}
+              >
+                {/* 📱 Feature Image */}
+                <img
+                  src="adcreate.png"
+                  alt="image"
+                  className="max-w-full h-full object-contain"
+                />
+
+                {/* Top notch */}
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-4 md:w-32 md:h-6 bg-black rounded-b-2xl"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
 
       {/* Features Section */}
       <section className="py-16 px-4 bg-white">

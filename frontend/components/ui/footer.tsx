@@ -44,8 +44,6 @@ export const Footer: React.FunctionComponent = () => {
                     <ul className="space-y-2 text-sm">
                         <li><a href="#" className="hover:text-white">About us</a></li>
                         <li><a href="#" className="hover:text-white">Contact</a></li>
-                        <li><a href="#" className="hover:text-white">Jobs</a></li>
-                        <li><a href="#" className="hover:text-white">Press kit</a></li>
                     </ul>
                 </div>
 
