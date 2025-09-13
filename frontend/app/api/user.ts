@@ -45,3 +45,12 @@ export const googleLogin = async ( tokenId: string ) => {
     );
     return response.data;
 };
+
+export const logOut = async () => {
+    const response = await axios.post( `${API_URL}/api/v1/logout`, {}, {
+        headers: {
+            "Content-Type": "application/json",
+        }
+    } );
+    return response.data;
+}

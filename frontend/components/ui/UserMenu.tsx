@@ -1,19 +1,23 @@
 import { useState } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
+export default function UserMenu( { User }: { User: any } ) {
+  const [open, setOpen] = useState( false );
+  const { user, isLoggedIn, logout } = useAuthStore();
 
-export default function UserMenu({ user }: { user: any }) {
-  const [open, setOpen] = useState(false);
+
 
   const handleSignOut = () => {
     // Call backend logout API if you have one
     document.cookie = "token=; Max-Age=0; path=/;"; // clear cookie
+    if ( !isLoggedIn ) return;
+    logout();
     window.location.href = "/";
-  };
-
+  }
   return (
     <div
       className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => setOpen( true )}
+      onMouseLeave={() => setOpen( false )}
     >
       {/* Avatar */}
       <div className="flex items-center cursor-pointer">
@@ -32,10 +36,22 @@ export default function UserMenu({ user }: { user: any }) {
             <span className="font-semibold">{user?.user.username}</span>
           </div>
           <a
-            href="/profile"
+            href="/admin"
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >
-            Profile
+            Admin
+          </a>
+          <a
+            href="/social"
+            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+          >
+            Social
+          </a>
+          <a
+            href="/analytics"
+            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+          >
+            Analytics
           </a>
           <button
             onClick={handleSignOut}

@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GoogleOAuthProvider } from "@react-oauth/google"
-import FacebookLogin from 'react-facebook-login';
-
 const geistSans = Geist( {
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -30,8 +28,7 @@ export default function RootLayout( {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
-          {/* <FacebookLogin appId={process.env.NEXT_PUBLIC_FACEBOOK_APP_ID!} autoLoad={false}  fields="name,email,picture" callback={()=>{}}/> */}
-            {children}
+          {children}
         </GoogleOAuthProvider>
       </body>
     </html>
