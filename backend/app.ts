@@ -25,6 +25,9 @@ app.use( express.json() );
 app.use( cookieParser() );
 app.use( express.urlencoded( { extended: true } ) );
 checkConnection();
+app.get( "/", ( req: Request, res: Response, next ) => {
+res.status( 200 ).send( "Welcome to Adcreate.ai Backend!" );
+} )
 app.get( "/api/health", ( req: Request, res: Response ) => {
     res.status( 200 ).send( "App is running fine" );
 } );
