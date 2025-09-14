@@ -159,7 +159,7 @@ General Design Guidelines:
   }
 
   return {
-    // adCopies: adCopy.match(/(Option\s*\d+:[\s\S]*?)(?=\nOption\s*\d+:|$)/g) || [],
+    adCopies: adCopy.match( /(Option\s*\d+:[\s\S]*?)(?=\nOption\s*\d+:|$)/g ) || [],
     imageBase64: imageBuffer ? imageBuffer.toString( "base64" ) : null,
   };
 
