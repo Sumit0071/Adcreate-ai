@@ -1,9 +1,9 @@
 import axios from "axios";
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
+import { BusinessProfile } from "@/components/businessProfileCard";
 
 // Create a new business profile
-export const createBusinessProfile = async (data: any) => {
+export const createBusinessProfile = async (data:BusinessProfile) => {
   try {
     const response = await axios.post(
       `${API_URL}/api/v1/business/create`,
@@ -65,14 +65,23 @@ export const getBusinessProfileById = async (id: number) => {
 // Generate ads for a specific profile
 export const generateAdsForProfile = async (profileId: number, data: any) => {
   try {
+     console.log("📤 Sending payload to backend:", data);
     const response = await axios.post(
       `${API_URL}/api/v1/business/${profileId}/generate-ads`,
       data,
       { withCredentials: true }
     );
     return response.data;
-  } catch (error) {
-    console.error("Error generating ads:", error);
+  } catch (error:any) {
+    if (error.response) {
+      console.error("❌ Server responded with:", error.response.data);
+      console.error("📌 Status:", error.response.status);
+      console.error("📌 Headers:", error.response.headers);
+    } else if (error.request) {
+      console.error("❌ No response received:", error.request);
+    } else {
+      console.error("❌ Error setting up request:", error.message);
+    }
     throw error;
   }
 };

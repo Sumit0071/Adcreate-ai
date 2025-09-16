@@ -27,7 +27,9 @@ import { BusinessProfileForm } from "@/components/business-profile-form"
 import { AdGenerationModal } from "@/components/ad-generation-modal"
 import { WhatsAppChatImport } from "@/components/whatsapp-chat-import"
 import Link from "next/link"
+import { createBusinessProfile } from "@/app/api/businessProfile"
 interface BusinessProfile {
+  id?: number | undefined;
   businessName: string
   niche: string
   productService: string
@@ -58,11 +60,18 @@ export default function Home() {
     { name: "About", link: "/about" },
   ];
 
-  const handleProfileSubmit = ( profile: BusinessProfile ) => {
+  const handleProfileSubmit = async ( profile: BusinessProfile ) => {
     setBusinessProfile( profile )
     setShowProfileForm( false )
     setShowWhatsAppImport( false ) // Reset WhatsApp import when profile is submitted
     setShowAdModal( true )
+    try {
+      const result = await createBusinessProfile( profile )
+      console.log( "✅ Business profile created:", result )
+    }
+    catch ( error ) {
+      console.error( "❌ Error creating business profile:", error )
+    }
   }
 
   const handleGetStarted = () => {
@@ -84,7 +93,7 @@ export default function Home() {
   }
 
   if ( showProfileForm ) {
-    return <BusinessProfileForm onSubmit={handleProfileSubmit} onBack={() => setShowProfileForm( false )} />
+    return <BusinessProfileForm onSubmitData={handleProfileSubmit} onBack={() => setShowProfileForm( false )} />
   }
 
   if ( showWhatsAppImport ) {
@@ -95,64 +104,64 @@ export default function Home() {
     <div className={`min-h-screen ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50"}`}>
       {/* Navbar */}
       <header className="fixed top-2 left-0 w-full z-50  h-15 ">
-         <div className="hidden md:block">
-        <Navbar>
-          <NavBody className="flex items-center justify-between px-6">
-            <div className="flex items-center gap-x-6">
-              <NavbarLogo />
-              <NavItems items={navItems} />
-            </div>
-            <div className="flex items-center gap-x-4">
-              <NavbarButton variant="dark" onClick={toggleTheme} className="justify-self-end">
-                {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </NavbarButton>
-              {!user ? (
-                <NavbarButton variant="dark" onClick={() => setShowAuth( true )}>
-                  Sign Up
+        <div className="hidden md:block">
+          <Navbar>
+            <NavBody className="flex items-center justify-between px-6">
+              <div className="flex items-center gap-x-6">
+                <NavbarLogo />
+                <NavItems items={navItems} />
+              </div>
+              <div className="flex items-center gap-x-4">
+                <NavbarButton variant="dark" onClick={toggleTheme} className="justify-self-end">
+                  {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </NavbarButton>
-              ) : (
-                <UserMenu User={user} />
-              )}
-            </div>
-          </NavBody>
-        </Navbar>
+                {!user ? (
+                  <NavbarButton variant="dark" onClick={() => setShowAuth( true )}>
+                    Sign Up
+                  </NavbarButton>
+                ) : (
+                  <UserMenu User={user} />
+                )}
+              </div>
+            </NavBody>
+          </Navbar>
         </div>
         {/* Mobile Navbar */}
         <div className="block md:hidden">
-        <MobileNav>
-          <MobileNavHeader>
-            <NavbarLogo />
-            <MobileNavToggle
-              isOpen={isOpen}
-              onClick={() => setIsOpen( !isOpen )}
-            />
-          </MobileNavHeader>
-          <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen( false )}>
-            {navItems.map( ( item, idx ) => (
-              <a
-                key={idx}
-                href={item.link}
-                className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
-                onClick={() => setIsOpen( false )}
-              >
-                {item.name}
-              </a>
-            ) )}
-            {!user ? (
-              <NavbarButton
-                className="mt-4 w-full"
-                variant="dark"
-                onClick={() => setShowAuth( true )}
-              >
-                Sign Up / Login
-              </NavbarButton>
-            ) : (
-              <NavbarButton className="mt-4 w-full" variant="dark">
-                Sign Out
-              </NavbarButton>
-            )}
-          </MobileNavMenu>
-        </MobileNav>
+          <MobileNav>
+            <MobileNavHeader>
+              <NavbarLogo />
+              <MobileNavToggle
+                isOpen={isOpen}
+                onClick={() => setIsOpen( !isOpen )}
+              />
+            </MobileNavHeader>
+            <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen( false )}>
+              {navItems.map( ( item, idx ) => (
+                <a
+                  key={idx}
+                  href={item.link}
+                  className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
+                  onClick={() => setIsOpen( false )}
+                >
+                  {item.name}
+                </a>
+              ) )}
+              {!user ? (
+                <NavbarButton
+                  className="mt-4 w-full"
+                  variant="dark"
+                  onClick={() => setShowAuth( true )}
+                >
+                  Sign Up / Login
+                </NavbarButton>
+              ) : (
+                <NavbarButton className="mt-4 w-full" variant="dark">
+                  Sign Out
+                </NavbarButton>
+              )}
+            </MobileNavMenu>
+          </MobileNav>
         </div>
       </header>
       {/* Auth Modal */}
@@ -328,7 +337,7 @@ export default function Home() {
 
       {/* Ad Generation Modal */}
       {showAdModal && businessProfile && (
-        <AdGenerationModal businessProfile={businessProfile} onClose={() => setShowAdModal( false )} />
+        <AdGenerationModal businessProfile={businessProfile as Required<BusinessProfile>} onClose={() => setShowAdModal( false )} />
       )}
       {/* Footer */}
       <Footer />

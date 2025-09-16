@@ -11,8 +11,10 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, Sparkles, Download, Copy, RefreshCw, ImageIcon, Share2, Eye } from "lucide-react"
-
+import { generateAdsForProfile } from "@/app/api/businessProfile";
+import { parseAdContent } from "@/lib/parseAdContent";
 interface BusinessProfile {
+  id: number
   businessName: string
   niche: string
   productService: string
@@ -35,75 +37,98 @@ interface AdGenerationModalProps {
   onClose: () => void
 }
 
-export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModalProps) {
-  const [specialInstructions, setSpecialInstructions] = useState("")
-  const [contextImage, setContextImage] = useState<File | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [generatedAds, setGeneratedAds] = useState<AdSequence[]>([])
-  const [showResults, setShowResults] = useState(false)
-  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop")
-  const [showSocialShare, setShowSocialShare] = useState(false)
+export function AdGenerationModal( { businessProfile, onClose }: AdGenerationModalProps ) {
+  const [specialInstructions, setSpecialInstructions] = useState( "" )
+  const [contextImage, setContextImage] = useState<File | null>( null )
+  const [isGenerating, setIsGenerating] = useState( false )
+  const [generatedAds, setGeneratedAds] = useState<AdSequence[]>( [] )
+  const [showResults, setShowResults] = useState( false )
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">( "desktop" )
+  const [showSocialShare, setShowSocialShare] = useState( false )
+// 🔑 Normalize adsResponse into an array
+const normalizeResponse = (res: any) => {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (res.ads && Array.isArray(res.ads)) return res.ads; // in case backend wraps it
+  return [res]; // fallback: single object
+};
 
-  const generateAds = async () => {
-    setIsGenerating(true)
+const generateAds = async () => {
+  setIsGenerating(true);
+  try {
+    const payload: any = {
+      businessName: businessProfile.businessName,
+      niche: businessProfile.niche,
+      productService: businessProfile.productService,
+      targetAudience: businessProfile.targetAudience,
+      adGoal: businessProfile.adGoal,
+    };
 
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    if (specialInstructions.trim()) {
+      payload.specialInstructions = specialInstructions.trim();
+    }
 
-    const mockAds: AdSequence[] = [
-      {
-        id: 1,
-        title: "Conversion-Focused Ad",
-        headline: `Transform Your ${businessProfile.niche} Business Today`,
-        description: `Join thousands who've discovered ${businessProfile.productService}. Perfect for ${businessProfile.targetAudience.split(" ").slice(0, 5).join(" ")}...`,
-        cta: "Get Started Now",
-        imageUrl: `/placeholder.svg?height=400&width=600&query=${businessProfile.niche} business success`,
-        style: "Direct & Action-Oriented",
-      },
-      {
-        id: 2,
-        title: "Emotional Connection Ad",
-        headline: `Finally, A Solution That Understands You`,
-        description: `We know how challenging it can be for ${businessProfile.targetAudience.split(" ").slice(0, 8).join(" ")}. That's why we created ${businessProfile.productService}.`,
-        cta: "Learn More",
-        imageUrl: `/placeholder.svg?height=400&width=600&query=${businessProfile.niche} customer satisfaction`,
-        style: "Empathetic & Relatable",
-      },
-      {
-        id: 3,
-        title: "Social Proof Ad",
-        headline: `Why 10,000+ Customers Choose ${businessProfile.businessName}`,
-        description: `"${businessProfile.productService} changed everything for my business. The results speak for themselves." - Verified Customer`,
-        cta: "See Success Stories",
-        imageUrl: `/placeholder.svg?height=400&width=600&query=${businessProfile.niche} testimonials success`,
-        style: "Trust & Authority",
-      },
-    ]
+    let adsResponse;
+    if (contextImage) {
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        formData.append(key, value as string);
+      });
+      formData.append("contextImage", contextImage);
+      adsResponse = await generateAdsForProfile(businessProfile.id, formData);
+    } else {
+      adsResponse = await generateAdsForProfile(businessProfile.id, payload);
+    }
 
-    setGeneratedAds(mockAds)
-    setIsGenerating(false)
-    setShowResults(true)
+    const adsArray = normalizeResponse(adsResponse);
+
+    const parsedAds: AdSequence[] = adsArray.map(
+      (ad: { id: number; content: string; imageUrl: string | null; generatedAt: string }, idx: number) => {
+        const { headline, body, cta } = parseAdContent(ad.content);
+        return {
+          id: ad.id,
+          title: `Option ${idx + 1}`,
+          headline,
+          description: body,
+          cta,
+          imageUrl: ad.imageUrl || "/placeholder.svg",
+          style: "Generated",
+        };
+      }
+    );
+
+    setGeneratedAds(parsedAds);
+    setShowResults(true);
+  } catch (error) {
+    console.error("❌ Error generating ads:", error);
+    alert("Failed to generate ads. Please try again.");
+  } finally {
+    setIsGenerating(false);
   }
+};
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+
+  const handleImageUpload = ( e: React.ChangeEvent<HTMLInputElement> ) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setContextImage(file)
+    if ( file ) {
+      setContextImage( file )
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+  const copyToClipboard = ( text: string ) => {
+    navigator.clipboard.writeText( text )
   }
 
-  const handleSocialShare = (ad: AdSequence, platform: string) => {
-    console.log(`Sharing ad ${ad.id} to ${platform}`)
-    alert(`Ad scheduled for ${platform}!`)
+  const handleSocialShare = ( ad: AdSequence, platform: string ) => {
+    console.log( `Sharing ad ${ad.id} to ${platform}` )
+    alert( `Ad scheduled for ${platform}!` )
   }
 
-  if (showResults) {
+  if ( showResults ) {
     return (
       <Dialog open={true} onOpenChange={onClose}>
-        <DialogContent className="max-w-screen max-h-[95vh] overflow-y-auto">
+        <DialogContent className="!max-w-5xl !w-full max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-blue-600" />
@@ -113,14 +138,14 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
               <Button
                 variant={previewMode === "desktop" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPreviewMode("desktop")}
+                onClick={() => setPreviewMode( "desktop" )}
               >
                 Desktop
               </Button>
               <Button
                 variant={previewMode === "mobile" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPreviewMode("mobile")}
+                onClick={() => setPreviewMode( "mobile" )}
               >
                 Mobile
               </Button>
@@ -129,14 +154,14 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
 
           <Tabs defaultValue="0" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              {generatedAds.map((ad, index) => (
+              {generatedAds.map( ( ad, index ) => (
                 <TabsTrigger key={ad.id} value={index.toString()}>
                   {ad.title}
                 </TabsTrigger>
-              ))}
+              ) )}
             </TabsList>
 
-            {generatedAds.map((ad, index) => (
+            {generatedAds.map( ( ad, index ) => (
               <TabsContent key={ad.id} value={index.toString()}>
                 <Card>
                   <CardHeader>
@@ -151,12 +176,12 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => copyToClipboard(`${ad.headline}\n\n${ad.description}\n\n${ad.cta}`)}
+                          onClick={() => copyToClipboard( `${ad.headline}\n\n${ad.description}\n\n${ad.cta}` )}
                         >
                           <Copy className="w-4 h-4 mr-2" />
                           Copy Text
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => setShowSocialShare(!showSocialShare)}>
+                        <Button variant="outline" size="sm" onClick={() => setShowSocialShare( !showSocialShare )}>
                           <Share2 className="w-4 h-4 mr-2" />
                           Share
                         </Button>
@@ -167,9 +192,8 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                     <div className="grid lg:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div
-                          className={`border rounded-lg p-4 bg-white shadow-sm transition-all ${
-                            previewMode === "mobile" ? "max-w-sm mx-auto" : "w-full"
-                          }`}
+                          className={`border rounded-lg p-4 bg-white shadow-sm transition-all ${previewMode === "mobile" ? "max-w-sm mx-auto" : "w-full"
+                            }`}
                         >
                           <div className="relative">
                             <img
@@ -199,7 +223,7 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleSocialShare(ad, "Facebook")}
+                                  onClick={() => handleSocialShare( ad, "Facebook" )}
                                   className="bg-blue-600 text-white hover:bg-blue-700"
                                 >
                                   Facebook
@@ -207,7 +231,7 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleSocialShare(ad, "Instagram")}
+                                  onClick={() => handleSocialShare( ad, "Instagram" )}
                                   className="bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600"
                                 >
                                   Instagram
@@ -215,7 +239,7 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleSocialShare(ad, "LinkedIn")}
+                                  onClick={() => handleSocialShare( ad, "LinkedIn" )}
                                   className="bg-blue-700 text-white hover:bg-blue-800"
                                 >
                                   LinkedIn
@@ -223,7 +247,7 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleSocialShare(ad, "Twitter")}
+                                  onClick={() => handleSocialShare( ad, "Twitter" )}
                                   className="bg-black text-white hover:bg-gray-800"
                                 >
                                   Twitter
@@ -261,7 +285,7 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </Button>
-                          <Button variant="outline" className="bg-transparent">
+                          <Button variant="outline" className="bg-transparent" onClick={() => generateAds()}>
                             <RefreshCw className="w-4 h-4 mr-2" />
                             Regenerate
                           </Button>
@@ -287,11 +311,11 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
                   </CardContent>
                 </Card>
               </TabsContent>
-            ))}
+            ) )}
           </Tabs>
 
           <div className="flex justify-between pt-4">
-            <Button variant="outline" onClick={() => setShowResults(false)}>
+            <Button variant="outline" onClick={() => setShowResults( false )}>
               Generate New Ads
             </Button>
             <div className="flex gap-2">
@@ -342,7 +366,7 @@ export function AdGenerationModal({ businessProfile, onClose }: AdGenerationModa
               id="instructions"
               placeholder="Any specific requirements, tone, or messaging you'd like to include in your ads..."
               value={specialInstructions}
-              onChange={(e) => setSpecialInstructions(e.target.value)}
+              onChange={( e ) => setSpecialInstructions( e.target.value )}
               className="min-h-[100px] resize-none"
             />
           </div>
