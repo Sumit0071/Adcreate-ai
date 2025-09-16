@@ -5,7 +5,8 @@
 **AdCreate-AI** is an AI-powered platform that allows businesses to create high-converting ads in seconds. Transform your business profile into multiple ad variations with custom copy and AI-generated images tailored to your target audience.
 
 ---
-
+#Live
+[Live](https://adcreate-ai.vercel.app)
 ## Features
 
 * **AI-Powered Ad Generation**: Generate multiple ad variations automatically.
@@ -20,10 +21,9 @@
 
 ## Tech Stack
 
-| Frontend                                                                                                   | Backend                                                                                                    | Database                                                                                                            | AI / ML                                                                                                 | Deployment                                                                                              |
-| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge\&logo=react\&logoColor=61DAFB)      | ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge\&logo=node.js\&logoColor=white) | ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge\&logo=mongodb\&logoColor=white)          | ![OpenAI](https://img.shields.io/badge/OpenAI-000000?style=for-the-badge\&logo=openai\&logoColor=white) | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge\&logo=vercel\&logoColor=white) |
-| ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge\&logo=next.js\&logoColor=white) | ![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge)                             | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge\&logo=postgresql\&logoColor=white) |
+
+  ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge\&logo=node.js\&logoColor=white)  ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge\&logo=postgresql\&logoColor=white)  ![Gemini](https://img.shields.io/badge/OpenAI-000000?style=for-the-badge\&logo=openai\&logoColor=white)  ![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge\&logo=vercel\&logoColor=white) 
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge\&logo=next.js\&logoColor=white) ![Express](https://img.shields.io/badge/Express.js-000000?style=for-the-badge)                         
 
 ---
 
@@ -43,7 +43,7 @@
 * Node.js >= 22.x
 * npm or yarn
 * MongoDB / PostgreSQL instance
-* Gemini APi Key
+* Gemini API Key
 
 ### Installation
 
@@ -67,13 +67,27 @@ Create a `.env` file in the backend and frontend directories:
 
 ```env
 # Backend
-DATABASE_URL=your_database_url
-OPENAI_API_KEY=your_openai_api_key
+PORT=
+FRONTEND_URL="YOUR_FRONTEND_URL"
 JWT_SECRET=your_jwt_secret
+SALT=10
 
-# Frontend (if using Vite)
-VITE_OPENAI_API_KEY=your_openai_api_key
-BACKEND_URL=http://localhost:5000
+DATABASE_URL=
+
+# Cloudinary
+CLOUD_NAME=
+API_KEY=
+API_SECRET=
+
+# Google OAuth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:5000/api/v1/auth/google/callback
+
+GEMINI_API_KEY=
+
+# Frontend (Next.js)
+NEXT_BACKEND_URL=http://localhost:5000
 ```
 
 ### Running the App
@@ -88,7 +102,7 @@ cd ../frontend
 npm run dev
 ```
 
-The app should now be running at `http://localhost:3000`.
+The app should now be running at [http://localhost:3000](http://localhost:3000).
 
 ---
 
@@ -108,10 +122,7 @@ Contributions are welcome! Please fork the repository and submit a pull request.
 
 ---
 
-## License
 
 MIT License © 2025 AdCreate-AI
 
 ---
-
-
