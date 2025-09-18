@@ -101,19 +101,43 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen ${theme === "dark" ? "bg-gray-900 text-white" : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50"}`}>
+    <div
+      className={`relative min-h-screen overflow-hidden ${theme === "dark"
+          ? "bg-gradient-to-bl from-gray-800 via-gray-900 to-slate-950 text-white"
+          : "bg-gradient-to-bl from-white via-blue-50 to-pink-100"
+        }`}
+    >
+      {/* Background Blobs (shared across sections) */}
+      <div className="absolute inset-0 -z-10">
+        {/* Pink oval between Hero & Features */}
+        <div className="absolute top-[70vh] left-[-20vw] w-[80vw] h-[60vh] rounded-full bg-pink-300 opacity-50 blur-[120px]" />
+        {/* Blue blob for Features section */}
+        <div className="absolute top-[120vh] right-[-15vw] w-[70vw] h-[50vh] rounded-full bg-blue-300 opacity-40 blur-[120px]" />
+      </div>
+
       {/* Navbar */}
-      <header className="fixed top-2 left-0 w-full z-50  h-15 ">
+      <header className="fixed top-2 left-0 w-full z-50 h-15">
         <div className="hidden md:block">
           <Navbar>
             <NavBody className="flex items-center justify-between px-6">
               <div className="flex items-center gap-x-6">
                 <NavbarLogo />
-                <NavItems items={navItems} />
+                <NavItems
+                  items={navItems}
+                  className={`${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                />
               </div>
               <div className="flex items-center gap-x-4">
-                <NavbarButton variant="dark" onClick={toggleTheme} className="justify-self-end">
-                  {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                <NavbarButton
+                  variant="dark"
+                  onClick={toggleTheme}
+                  className="rounded-full"
+                >
+                  {theme === "dark" ? (
+                    <Sun className="w-5 h-5" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
+                  )}
                 </NavbarButton>
                 {!user ? (
                   <NavbarButton variant="dark" onClick={() => setShowAuth( true )}>
@@ -131,10 +155,7 @@ export default function Home() {
           <MobileNav>
             <MobileNavHeader>
               <NavbarLogo />
-              <MobileNavToggle
-                isOpen={isOpen}
-                onClick={() => setIsOpen( !isOpen )}
-              />
+              <MobileNavToggle isOpen={isOpen} onClick={() => setIsOpen( !isOpen )} />
             </MobileNavHeader>
             <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen( false )}>
               {navItems.map( ( item, idx ) => (
@@ -164,30 +185,32 @@ export default function Home() {
           </MobileNav>
         </div>
       </header>
+
       {/* Auth Modal */}
       {showAuth && <AuthModal onClose={() => setShowAuth( false )} />}
 
       {/* Hero Section */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 relative z-10">
         <div className="container mx-auto max-w-6xl grid md:grid-cols-2 items-center gap-12">
+          <div className="absolute top-10 left-10 w-24 h-24 bg-gradient-to-tr from-pink-400 to-purple-400 rounded-full opacity-30 blur-xl animate-float"></div>
+          <div className="absolute bottom-10 right-10 w-24 h-24 bg-gradient-to-tr from-pink-400 to-purple-400 rounded-full opacity-30 blur-xl animate-float"></div>
           {/* Left Content */}
           <div className="text-center md:text-left">
             <Badge className="mb-6 bg-blue-100 text-blue-700 hover:bg-blue-100">
               <Sparkles className="w-4 h-4 mr-1" />
               AI-Powered Ad Generation
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 text-balance">
-              Create High-Converting Ads in
+            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-balance">
+              Create High-Converting Ads in{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                {" "}Seconds
+                Seconds
               </span>
             </h1>
-            <p className="text-xl text-gray-600 mb-8 text-pretty max-w-2xl mx-auto md:mx-0">
+            <p className="text-xl mb-8 max-w-2xl mx-auto md:mx-0">
               Transform your business profile into compelling ad campaigns with AI.
-              Generate multiple ad variations, custom images, and copy that converts—all
-              tailored to your target audience.
+              Generate multiple ad variations, custom images, and copy that
+              converts—all tailored to your target audience.
             </p>
-
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Button
                 size="lg"
@@ -206,7 +229,11 @@ export default function Home() {
                 <MessageSquare className="w-5 h-5 mr-2" />
                 Import WhatsApp Chats
               </Button>
-              <Button size="lg" variant="outline" className="px-8 py-3 bg-transparent">
+              <Button
+                size="lg"
+                variant="outline"
+                className="px-8 py-3 bg-transparent"
+              >
                 Watch Demo
               </Button>
             </div>
@@ -216,16 +243,13 @@ export default function Home() {
           <div className="flex justify-center md:justify-end">
             <div className="w-48 h-96 md:w-64 md:h-[520px] bg-black rounded-[2.5rem] md:rounded-[3rem] p-2 shadow-xl">
               <div
-                className={`w-full h-full bg-[#a3a5a5] rounded-[2rem] md:rounded-[2.5rem] relative overflow-hidden transition-all duration-500 flex flex-col items-center justify-center`}
+                className="w-full h-full bg-[#a3a5a5] rounded-[2rem] md:rounded-[2.5rem] relative overflow-hidden flex flex-col items-center justify-center"
               >
-                {/* 📱 Feature Image */}
                 <img
                   src="adcreate.png"
                   alt="image"
                   className="max-w-full h-full object-contain"
                 />
-
-                {/* Top notch */}
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-24 h-4 md:w-32 md:h-6 bg-black rounded-b-2xl"></div>
               </div>
             </div>
@@ -233,51 +257,53 @@ export default function Home() {
         </div>
       </section>
 
-
       {/* Features Section */}
-      <section className="py-16 px-4 bg-white">
+      <section className={`py-16 px-4 relative z-10 ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+        <div className="absolute bottom-10 left-10 w-24 h-24 bg-gradient-to-tr from-pink-400 to-purple-400 rounded-full opacity-30 blur-xl animate-float"></div>
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Everything You Need to Create Winning Ads</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Our AI analyzes your business profile and generates targeted ad campaigns that speak directly to your
-              audience.
+            <h2 className="text-3xl font-bold  mb-4">
+              Everything You Need to Create Winning Ads
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Our AI analyzes your business profile and generates targeted ad
+              campaigns that speak directly to your audience.
             </p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className={`border-0 shadow-lg hover:shadow-xl transition-shadow ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}>
               <CardHeader>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
                   <Target className="w-6 h-6 text-blue-600" />
                 </div>
-                <CardTitle>Smart Targeting</CardTitle>
-                <CardDescription>
-                  AI analyzes your niche and target audience to create highly relevant ad copy and visuals.
+                <CardTitle className={`${theme === "dark" ? "text-white" : "text-gray-600"}`}>Smart Targeting</CardTitle>
+                <CardDescription className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                  AI analyzes your niche and target audience to create highly
+                  relevant ad copy and visuals.
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className={`border-0 shadow-lg hover:shadow-xl transition-shadow ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}>
               <CardHeader>
                 <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-indigo-600" />
                 </div>
-                <CardTitle>Multiple Variations</CardTitle>
-                <CardDescription>
-                  Generate 3 unique ad sequences with different approaches to maximize your campaign success.
+                <CardTitle className={`${theme === "dark" ? "text-white" : "text-gray-600"}`}>Multiple Variations</CardTitle>
+                <CardDescription className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                  Generate 3 unique ad sequences with different approaches to
+                  maximize your campaign success.
                 </CardDescription>
               </CardHeader>
             </Card>
-
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className={`border-0 shadow-lg hover:shadow-xl transition-shadow ${theme === "dark" ? "bg-gray-800" : "bg-white"}`}>
               <CardHeader>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
                   <Users className="w-6 h-6 text-purple-600" />
                 </div>
-                <CardTitle>Custom Images</CardTitle>
-                <CardDescription>
-                  AI-generated images tailored to your brand and message, or upload your own context images.
+                <CardTitle className={`${theme === "dark" ? "text-white" : "text-gray-600"}`}>Custom Images</CardTitle>
+                <CardDescription className={`${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                  AI-generated images tailored to your brand and message, or
+                  upload your own context images.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -286,49 +312,69 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-16 px-4 bg-gray-50">
+      <section className="py-16 px-4  relative z-10">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-gray-600">Create professional ads in three simple steps</p>
+            <h2 className="text-3xl font-bold  mb-4">
+              How It Works
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300">
+              Create professional ads in three simple steps
+            </p>
           </div>
-
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                 1
               </div>
-              <h3 className="text-xl font-semibold mb-2">Create Business Profile</h3>
-              <p className="text-gray-600">Tell us about your business, target audience, and advertising goals.</p>
+              <h3 className="text-xl font-semibold mb-2">
+                Create Business Profile
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Tell us about your business, target audience, and advertising
+                goals.
+              </p>
             </div>
-
             <div className="text-center">
               <div className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                 2
               </div>
-              <h3 className="text-xl font-semibold mb-2">Add Special Instructions</h3>
-              <p className="text-gray-600">Provide specific requirements and upload context images if needed.</p>
+              <h3 className="text-xl font-semibold mb-2">
+                Add Special Instructions
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Provide specific requirements and upload context images if
+                needed.
+              </p>
             </div>
-
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                 3
               </div>
               <h3 className="text-xl font-semibold mb-2">Generate & Download</h3>
-              <p className="text-gray-600">Get 3 unique ad variations with custom copy and images ready to use.</p>
+              <p className="text-gray-600 dark:text-gray-300">
+                Get 3 unique ad variations with custom copy and images ready to
+                use.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-indigo-600">
+      {/* CTA */}
+      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 relative z-10">
         <div className="container mx-auto text-center max-w-3xl">
-          <h2 className="text-4xl font-bold text-white mb-6">Ready to Transform Your Advertising?</h2>
+          <h2 className="text-4xl font-bold text-white mb-6">
+            Ready to Transform Your Advertising?
+          </h2>
           <p className="text-xl text-blue-100 mb-8">
             Join thousands of businesses creating high-converting ads with AI
           </p>
-          <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3" onClick={handleGetStarted}>
+          <Button
+            size="lg"
+            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
+            onClick={handleGetStarted}
+          >
             Start Creating Ads Now
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
@@ -337,9 +383,11 @@ export default function Home() {
 
       {/* Ad Generation Modal */}
       {showAdModal && businessProfile && (
-        <AdGenerationModal businessProfile={businessProfile as Required<BusinessProfile>} onClose={() => setShowAdModal( false )} />
+        <AdGenerationModal
+          businessProfile={businessProfile as Required<BusinessProfile>}
+          onClose={() => setShowAdModal( false )}
+        />
       )}
-      {/* Footer */}
       <Footer />
     </div>
   );
