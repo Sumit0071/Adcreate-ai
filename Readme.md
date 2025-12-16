@@ -1,12 +1,13 @@
 # AdCreate-AI
 
-![AdCreate-AI Logo](https://via.placeholder.com/200x60?text=AdCreate-AI+Logo)
+![AdCreate-AI Logo](frontend/public/adcreate.png)
 
 **AdCreate-AI** is an AI-powered platform that allows businesses to create high-converting ads in seconds. Transform your business profile into multiple ad variations with custom copy and AI-generated images tailored to your target audience.
 
 ---
-#Live
+# Live
 [Live](https://adcreate-ai.vercel.app)
+
 ## Features
 
 * **AI-Powered Ad Generation**: Generate multiple ad variations automatically.
@@ -29,10 +30,17 @@
 
 ## Screenshots
 
-<!-- Add screenshots of the app here -->
+### Landing Page
+![Landing Page](pictures/landing-page1.png)
 
-![Home Page](https://via.placeholder.com/800x400?text=Home+Page)
-![Ad Generation Modal](https://via.placeholder.com/800x400?text=Ad+Generation+Modal)
+### Dashboard & Profile
+![Profile Page](pictures/profilePage.png)
+
+### Ad Customization
+![Customization Modal](pictures/customizationModal.png)
+
+### Generated Results
+![Generated Ads](pictures/generatedModal.png)
 
 ---
 
