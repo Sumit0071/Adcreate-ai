@@ -40,7 +40,7 @@
 ![Customization Modal](pictures/customizationModal.png)
 
 ### Generated Results
-![Generated Ads](pictures/generatedModal.png)
+![Generated Ads](pictures/generatedModal1.png)
 
 ---
 
