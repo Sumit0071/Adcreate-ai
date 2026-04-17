@@ -1,193 +1,122 @@
-import { useState } from 'react';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ToastContainer, toast } from 'react-toastify';
-import { Eye, EyeClosed } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
-import { googleLogin, registerUser } from '@/app/api/user';
-import FacebookLogin from '@greatsumini/react-facebook-login';
-const SignUp: React.FC<{ switchToLogin: () => void }> = ( { switchToLogin } ) => {
-  const [isVisible, setIsVisible] = useState( false );
-  const [loading, setLoading] = useState( false );
+"use client";
 
-  const handleSubmit = async ( e: React.FormEvent<HTMLFormElement> ) => {
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Eye, EyeClosed } from "lucide-react";
+import { toast } from "react-toastify";
+import { registerUser } from "@/app/api/user";
+
+const SignUp = ({ switchToLogin }: { switchToLogin: () => void }) => {
+
+  const [visible, setVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [user, setUser] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
+
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    const form = e.currentTarget;
-    const userData = {
-      username: ( form.username as HTMLInputElement ).value,
-      email: ( form.email as HTMLInputElement ).value,
-      password: ( form.password as HTMLInputElement ).value,
-      // Avatar: optional
-    };
+    setLoading(true);
 
     try {
-      setLoading( true );
-      const res = await registerUser( userData );
-      toast.success( 'User registered successfully!' );
-      console.log( 'Registered user:', res );
+      await registerUser(user);
 
-      form.reset(); // reset the form
-      // optionally redirect user here
-    } catch ( err: any ) {
-      console.error( 'Signup error:', err );
-      toast.error( err.response?.data?.message || 'Signup failed' );
-    } finally {
-      setLoading( false );
+      toast.success("Account created");
+
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Signup failed");
     }
+
+    setLoading(false);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 bg-blurred-100">
-      <Card className="w-full max-w-md shadow-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign Up</CardTitle>
-          <CardDescription>Create your account to get started</CardDescription>
-        </CardHeader>
+    <div className="space-y-5">
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-3">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                  Username
-                </label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  className="w-full border p-2 rounded mt-1"
-                  required
-                />
-              </div>
+      <h2 className="text-2xl font-bold">
+        Create Account
+      </h2>
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  className="w-full border p-2 rounded mt-1"
-                  required
-                />
-              </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    name="password"
-                    type={isVisible ? 'text' : 'password'}
-                    placeholder="********"
-                    className="w-full border p-2 pr-10 rounded mt-1"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsVisible( !isVisible )}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500 cursor-pointer"
-                    tabIndex={-1}
-                  >
-                    {isVisible ? <EyeClosed size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>
-            </div>
+        <input
+          type="text"
+          placeholder="Username"
+          className="w-full border rounded-lg p-3
+bg-white text-gray-900 border-gray-300
+dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700
+placeholder-gray-400 dark:placeholder-gray-500
+focus:outline-none focus:ring-2 focus:ring-indigo-500
+transition-colors"
+          onChange={(e) =>
+            setUser({ ...user, username: e.target.value })
+          }
+          required
+        />
 
-            <Button
-              type="submit"
-              className="w-full bg-blue-500 text-white"
-              disabled={loading}
-            >
-              {loading ? 'Creating Account...' : 'Create Account'}
-            </Button>
-          </form>
+        <input
+          type="email"
+          placeholder="Email"
+          className="w-full border rounded-lg p-3
+bg-white text-gray-900 border-gray-300
+dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700
+placeholder-gray-400 dark:placeholder-gray-500
+focus:outline-none focus:ring-2 focus:ring-indigo-500
+transition-colors"
+          onChange={(e) =>
+            setUser({ ...user, email: e.target.value })
+          }
+          required
+        />
 
-          <div className="mt-4 text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <button
-              type="button"
-              onClick={switchToLogin}
-              className="text-blue-500 hover:underline"
-            >
-              Login
-            </button>
-          </div>
+        <div className="relative">
 
-          <div className="mt-4 text-center text-sm text-gray-500">
-            By signing up, you agree to our{' '}
-            <a href="/terms-conditions" className="text-blue-500 hover:underline">
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a href="/privacy-policy" className="text-blue-500 hover:underline">
-              Privacy Policy
-            </a>.
-          </div>
+          <input
+            type={visible ? "text" : "password"}
+            placeholder="Password"
+            className="w-full border rounded-lg p-3
+bg-white text-gray-900 border-gray-300
+dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700
+placeholder-gray-400 dark:placeholder-gray-500
+focus:outline-none focus:ring-2 focus:ring-indigo-500
+transition-colors pr-10"
+            onChange={(e) =>
+              setUser({ ...user, password: e.target.value })
+            }
+            required
+          />
 
-          <div className="mt-6">
-            <div className="text-center text-sm text-gray-500 mb-2">Or sign up with</div>
-            <div className="flex justify-center gap-2">
-              <GoogleLogin
-                onSuccess={async ( credentialResponse ) => {
-                  try {
-                    const tokenId = credentialResponse.credential;
-                    if ( !tokenId ) {
-                      toast.error( 'Google login failed' );
-                      return;
-                    }
+          <button
+            type="button"
+            onClick={() => setVisible(!visible)}
+            className="absolute right-3 top-3"
+          >
+            {visible ? <EyeClosed size={18} /> : <Eye size={18} />}
+          </button>
 
-                    const res = await googleLogin( tokenId );
-                    toast.success( 'Google login successful!' );
-                    console.log( 'Google user:', res );
+        </div>
 
-                    window.location.href = '/dashboard';
-                  } catch ( err ) {
-                    console.error( 'Google login error:', err );
-                    toast.error( 'Google login failed' );
-                  }
-                }}
-                onError={() => toast.error( 'Google login failed' )}
-              />
-              <FacebookLogin
-                appId={process.env.NEXT_PUBLIC_FACEBOOK_APP_ID!}
-                onSuccess={( response ) => {
-                  console.log( 'Login Success!', response );
-                }}
-                onFail={( error ) => {
-                  console.log( 'Login Failed!', error );
-                }}
-                onProfileSuccess={( response ) => {
-                  console.log( 'Get Profile Success!', response );
-                }}
-              />
+        <Button className="w-full">
+          {loading ? "Creating..." : "Create Account"}
+        </Button>
 
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </form>
 
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        theme="light"
-      />
+      <div className="text-center text-sm">
+        Already have an account?{" "}
+        <button
+          onClick={switchToLogin}
+          className="text-blue-600"
+        >
+          Login
+        </button>
+      </div>
+
     </div>
   );
 };

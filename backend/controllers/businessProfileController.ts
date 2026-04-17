@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import { generateAdsequence, AdData } from "../utils/adCreativeGenerator";
+import { predictCTR } from "../utils/ctrPredictor";
 import cloudinary from "../config/cloudinary";
 import getDataUri from "../utils/dataUrl";
-const prisma = new PrismaClient();
-
 export const createBusinessProfile = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).id;
@@ -41,56 +40,93 @@ export const createBusinessProfile = async (req: Request, res: Response) => {
   }
 };
 
-export const updateBusinessDetails = async ( req: Request, res: Response ) => {
-    try {
-        const { businessName, niche, productService, targetAudience, adGoal } = req.body;
-        const { id } = req.params;
+export const updateBusinessDetails = async (req: Request, res: Response) => {
+  try {
+    const { businessName, niche, productService, targetAudience, adGoal } = req.body;
+    const { id } = req.params;
 
-        const businessDetails = await prisma.businessProfile.update( {
-            where: { id: Number( id ) },
-            data: {
-                businessName,
-                niche,
-                productService,
-                targetAudience,
-                adGoal
-            }
-        } );
+    const businessDetails = await prisma.businessProfile.update({
+      where: { id: Number(id) },
+      data: {
+        businessName,
+        niche,
+        productService,
+        targetAudience,
+        adGoal
+      }
+    });
 
-        res.status( 200 ).json( {
-            message: "Business details updated successfully",
-            success: true,
-            businessDetails
-        } );
-    }
-    catch ( error ) {
-        console.error( "Error updating business details:", error );
-        res.status( 500 ).json( {
-            error: "Internal server error",
-            success: false
-        } );
-    }
+    res.status(200).json({
+      message: "Business details updated successfully",
+      success: true,
+      businessDetails
+    });
+  }
+  catch (error) {
+    console.error("Error updating business details:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      success: false
+    });
+  }
 }
 
-export const deleteBusinessProfile = async ( req: Request, res: Response ) => {
-    try {
-        const { id } = req.params;
-        const deletedProfile = await prisma.businessProfile.delete( {
-            where: { id: Number( id ) }
-        } );
-        res.status( 200 ).json( {
-            message: "Business profile deleted successfully",
-            success: true,
-            deletedProfile
-        } );
+export const getBusinessProfiles = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
     }
-    catch ( error ) {
-        console.error( "Error deleting business profile:", error );
-        res.status( 500 ).json( {
-            error: "Internal server error",
-            success: false
-        } );
+    const profiles = await prisma.businessProfile.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.status(200).json({ success: true, businessProfiles: profiles });
+  } catch (error) {
+    console.error("Error fetching business profiles:", error);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
+export const getBusinessProfileById = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
     }
+    const { id } = req.params;
+    const businessProfile = await prisma.businessProfile.findFirst({
+      where: { id: Number(id), userId },
+    });
+    if (!businessProfile) {
+      return res.status(404).json({ message: "Business profile not found", success: false });
+    }
+    return res.status(200).json({ success: true, businessProfile });
+  } catch (error) {
+    console.error("Error fetching business profile:", error);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
+export const deleteBusinessProfile = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deletedProfile = await prisma.businessProfile.delete({
+      where: { id: Number(id) }
+    });
+    res.status(200).json({
+      message: "Business profile deleted successfully",
+      success: true,
+      deletedProfile
+    });
+  }
+  catch (error) {
+    console.error("Error deleting business profile:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      success: false
+    });
+  }
 }
 
 
@@ -132,26 +168,53 @@ export const generateAdSequence = async (req: Request, res: Response) => {
 
     const sequence = await generateAdsequence(requiredData);
 
-    const ads = await Promise.all(
+    // Upload generated image to Cloudinary (if available) instead of storing base64 in DB
+    let imageUrl: string | null = null;
+    if (sequence.imageBase64) {
+      try {
+        const base64DataUri = `data:image/png;base64,${sequence.imageBase64}`;
+        const uploadResult = await cloudinary.uploader.upload(base64DataUri, {
+          folder: "ad-creatives",
+        });
+        imageUrl = uploadResult.secure_url;
+        console.log(`✅ Ad image uploaded to Cloudinary: ${imageUrl}`);
+      } catch (uploadError) {
+        console.error("⚠️ Failed to upload image to Cloudinary:", uploadError);
+        // Fallback: still proceed without image rather than failing the entire request
+      }
+    }
+
+    const createdAds = await Promise.all(
       sequence.adCopies.map((content: string) =>
         prisma.ad.create({
           data: {
             content,
-            imageUrl: sequence.imageBase64 ? `data:image/png;base64,${sequence.imageBase64}` : null,
+            imageUrl,
             businessProfileId: businessProfile.id,
           },
         })
       )
     );
 
+    // Inject CTR into the response (not saved to DB)
+    const adsWithCtr = createdAds.map((ad: any) => {
+      const ctr = predictCTR({
+        niche: businessProfile.niche,
+        adGoal: businessProfile.adGoal,
+        headline: ad.content.substring(0, 50) // Mock headline extract
+      });
+      return { ...ad, ctr };
+    });
+
     res.status(201).json({
       message: "Ads generated successfully",
       success: true,
-      ads,
+      ads: adsWithCtr,
     });
   } catch (error) {
     console.error("Error generating ad sequence:", error);
     res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
 
