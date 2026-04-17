@@ -1,0 +1,16 @@
+name: ci-cd pipeline
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches: [ main ]
+        types: [ opened, synchronize ]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - name: Run build
+              run: echo "Building..."
+

@@ -1,7 +1,7 @@
 "use client"
 
 import { UserDashboard } from "@/components/user-dashboard"
-
+import { Sidebar } from "@/components/ui/sidebar"
 export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -11,7 +11,6 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
             <p className="text-gray-600">Manage your ad campaigns, business profiles, and track performance.</p>
           </div>
-
           <UserDashboard />
         </div>
       </div>

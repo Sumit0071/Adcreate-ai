@@ -1,8 +1,7 @@
 // prisma/seed.ts
-import { PrismaClient, Role, Plan, SenderType, ContentType } from "@prisma/client";
+import { Role, Plan, SenderType, ContentType } from "@prisma/client";
+import prisma from "../config/prisma";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Starting seed...");
@@ -125,3 +124,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+

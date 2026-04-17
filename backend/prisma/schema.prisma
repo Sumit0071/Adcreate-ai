@@ -11,7 +11,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -28,6 +27,7 @@ model User {
   credits  Int      @default(10) // Default credits for new users
   businessProfiles BusinessProfile[]
   whatsAppChats   WhatsAppChat[]
+  payments Payment[]
 }
 
 model BusinessProfile{
@@ -49,10 +49,36 @@ model Ad {
   content            String   // generated ad text
   imageUrl         String?
   generatedAt        DateTime @default(now())
+  isVideo            Boolean  @default(false)
   // relation
   businessProfileId  Int
   businessProfile    BusinessProfile @relation(fields: [businessProfileId], references: [id])
+  publishedPosts     PublishedPost[]
 }
+
+model PublishedPost {
+  id              Int      @id @default(autoincrement())
+  adId            Int
+  ad              Ad       @relation(fields: [adId], references: [id])
+  platform        String   // "Facebook", "Instagram", "LinkedIn", "Twitter"
+  content         String
+  status          PostStatus @default(PUBLISHED)
+  scheduledTime   DateTime?
+  publishedAt     DateTime?
+  externalPostId  String?  // Actual post ID from Facebook/Instagram Graph API
+  createdAt       DateTime @default(now())
+  analytics       AnalyticsEvent[]
+}
+
+model AnalyticsEvent {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  post      PublishedPost @relation(fields: [postId], references: [id])
+  eventType String   // "IMPRESSION", "CLICK", "CONVERSION"
+  createdAt DateTime @default(now())
+  metadata  Json?    // Optional extra info
+}
+
 model WhatsAppChat{
    id          Int      @id @default(autoincrement())
   waMessageId String   @unique           // ID from WhatsApp API (to avoid duplicates)
@@ -67,6 +93,39 @@ model WhatsAppChat{
   // Relation to user
   userId Int
   user   User     @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  orderId   String   @unique
+  paymentId String?
+
+  amount    Int
+  currency  String   @default("INR")
+
+  plan      Plan
+  status    PaymentStatus @default(PENDING)
+
+  receipt   String?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PostStatus {
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  DRAFT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
 enum Role {
   USER

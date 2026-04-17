@@ -60,3 +60,21 @@ export const logOut = async () => {
   });
   return response.data;
 };
+
+export const handlePayment = async (amount: number, plan: string) => {
+  const response = await axios.post(
+    `${API_URL}/api/v1/payment-checkout`,
+    {
+      amount,
+      plan: plan.toUpperCase(), // important for Prisma enum
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      withCredentials: true,
+    }
+  );
+
+  return response.data;
+};

@@ -1,9 +1,7 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-
-const prisma = new PrismaClient();
 
 // Create an OAuth2 client with your Google client ID
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -79,3 +77,4 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         });
     }
 };
+

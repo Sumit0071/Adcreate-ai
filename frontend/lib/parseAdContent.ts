@@ -5,13 +5,26 @@ type ParsedAd = {
 };
 
 export function parseAdContent(content: string): ParsedAd {
-  const headlineMatch = content.match(/Headline:\s*(.*)/i);
-  const bodyMatch = content.match(/Body Text:\s*([\s\S]*?)\n\nCTA:/i);
-  const ctaMatch = content.match(/CTA:\s*(.*)/i);
+  if (!content || typeof content !== "string") {
+    return { headline: "", body: "", cta: "Learn More" };
+  }
+  const cleanContent = content.replace(/\*\*/g, "").trim();
 
-  return {
-    headline: headlineMatch ? headlineMatch[1].trim() : "",
-    body: bodyMatch ? bodyMatch[1].trim() : "",
-    cta: ctaMatch ? ctaMatch[1].trim() : "",
-  };
+  const headlineMatch = cleanContent.match(/Headline\s*:?\s*(.*?)(?=\n|$)/is);
+  const bodyMatch = cleanContent.match(/Body Text\s*:?\s*([\s\S]*?)(?=\n\s*CTA\s|$)/i);
+  const ctaMatch = cleanContent.match(/CTA\s*:?\s*(.*?)(?=\n|$)/i);
+
+  let headline = headlineMatch ? headlineMatch[1].trim() : "";
+  let body = bodyMatch ? bodyMatch[1].trim() : "";
+  let cta = ctaMatch ? ctaMatch[1].trim() : "";
+
+  if (!headline && !body && !cta) {
+    const lines = cleanContent.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    headline = lines[0] || "";
+    body = lines.slice(1).join("\n") || cleanContent;
+    cta = "Learn More";
+  }
+  if (!cta) cta = "Learn More";
+
+  return { headline, body, cta };
 }
