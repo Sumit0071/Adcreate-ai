@@ -19,8 +19,10 @@
   "dependencies": {
     "@fal-ai/client": "^1.6.2",
     "@google/genai": "^1.43.0",
+    "@huggingface/inference": "^4.13.15",
     "@prisma/client": "^7.4.2",
     "@prisma/extension-accelerate": "^3.0.1",
+    "@zernio/node": "^0.2.121",
     "bcryptjs": "^3.0.2",
     "bottleneck": "^2.19.5",
     "bullmq": "^5.70.1",
