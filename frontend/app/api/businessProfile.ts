@@ -62,6 +62,22 @@ export const getBusinessProfileById = async (id: number) => {
 
 // ================== AD GENERATION APIs ==================
 
+// Get all ads for the logged-in user (paginated)
+export const getUserAds = async (page: number = 1, take: number = 20) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/v1/business/ads?page=${page}&take=${take}`,
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user ads:", error);
+    throw error;
+  }
+};
+
+// ================== AD GENERATION APIs ==================
+
 // Generate image ads for a specific profile (data can be plain object or FormData for file upload)
 export const generateAdsForProfile = async (profileId: number, data: any) => {
   try {
@@ -122,18 +138,23 @@ export const generateVideoAdForProfile = async (
   }
 };
 
-// ================== SOCIAL PUBLISHING APIs ==================
+// ================== SOCIAL PUBLISHING APIs (Zernio-powered) ==================
 
+/**
+ * Publish or schedule an ad to multiple platforms via Zernio.
+ * Platforms should be lowercase: "facebook", "instagram", "twitter", "linkedin", etc.
+ */
 export const publishAdToSocial = async (
   adId: number,
   platforms: string[],
   content?: string,
-  scheduledTime?: string
+  scheduledTime?: string,
+  accountIds?: Record<string, string>
 ) => {
   try {
     const response = await axios.post(
       `${API_URL}/api/v1/social/publish`,
-      { adId, platforms, content, scheduledTime },
+      { adId, platforms, content, scheduledTime, accountIds },
       { withCredentials: true }
     );
     return response.data;
@@ -176,5 +197,75 @@ export const trackAnalyticsEvent = async (
     await axios.post(`${API_URL}/api/v1/social/track`, { postId, eventType });
   } catch (error) {
     // Silent fail for tracking
+  }
+};
+
+// ── Zernio Account Management APIs ──────────────────────────────────────────
+
+/**
+ * Get a Zernio OAuth URL to connect a social account.
+ */
+export const getZernioConnectUrl = async (platform: string, profileId: string, redirectUrl?: string) => {
+  try {
+    const params = new URLSearchParams({ platform, profileId });
+    if (redirectUrl) params.set("redirectUrl", redirectUrl);
+    const response = await axios.get(
+      `${API_URL}/api/v1/social/connect-url?${params.toString()}`,
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error getting connect URL:", error);
+    throw error;
+  }
+};
+
+/**
+ * List all connected Zernio social accounts.
+ */
+export const getConnectedAccounts = async (platform?: string) => {
+  try {
+    const params = platform ? `?platform=${platform}` : "";
+    const response = await axios.get(
+      `${API_URL}/api/v1/social/accounts${params}`,
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching connected accounts:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create a Zernio profile (groups social accounts).
+ */
+export const createZernioProfile = async (name: string, description?: string) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/v1/social/profiles`,
+      { name, description },
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating Zernio profile:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch Zernio analytics for a specific post.
+ */
+export const getZernioPostAnalytics = async (postId: string) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/v1/social/zernio-analytics/${postId}`,
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching Zernio post analytics:", error);
+    throw error;
   }
 };

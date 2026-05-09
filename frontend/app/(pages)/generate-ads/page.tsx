@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import {
   Upload, Sparkles, Download, Copy, RefreshCw, ImageIcon,
   Share2, ArrowLeft, Loader2, Video, Play, Check, Globe,
-  Facebook, Instagram, Linkedin, Twitter, X, Calendar
+  Facebook, Instagram, Linkedin, Twitter, X, Calendar,
+  Heart, MessageCircle, Bookmark, Send as SendIcon
 } from "lucide-react";
 import {
   generateAdsForProfile,
@@ -22,6 +23,7 @@ import {
   publishAdToSocial,
 } from "@/app/api/businessProfile";
 import { parseAdContent } from "@/lib/parseAdContent";
+import { formatSocialCaption } from "@/lib/formatSocialCaption";
 import { useThemeStore } from "@/store/useThemeStore";
 import { toast } from "react-toastify";
 import {
@@ -33,6 +35,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdLoadingScreen } from "@/components/ad-loading-screen";
 
 interface BusinessProfile {
   id: number;
@@ -74,10 +77,10 @@ interface VideoAd {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const PLATFORMS = [
-  { id: "Facebook", label: "Facebook", icon: Facebook, color: "bg-blue-600" },
-  { id: "Instagram", label: "Instagram", icon: Instagram, color: "bg-gradient-to-r from-purple-500 to-pink-500" },
-  { id: "LinkedIn", label: "LinkedIn", icon: Linkedin, color: "bg-blue-700" },
-  { id: "Twitter", label: "Twitter/X", icon: Twitter, color: "bg-black" },
+  { id: "facebook", label: "Facebook", icon: Facebook, color: "bg-blue-600" },
+  { id: "instagram", label: "Instagram", icon: Instagram, color: "bg-gradient-to-r from-purple-500 to-pink-500" },
+  { id: "linkedin", label: "LinkedIn", icon: Linkedin, color: "bg-blue-700" },
+  { id: "twitter", label: "Twitter/X", icon: Twitter, color: "bg-black" },
 ];
 
 function normalizeResponse(res: any): any[] {
@@ -231,6 +234,12 @@ function GenerateAdsPage() {
     }
   };
 
+  // Build a clean social caption from the raw ad content
+  const getCleanCaption = (): string => {
+    const raw = publishingAd?.content || publishingVideo?.content || "";
+    return formatSocialCaption(raw);
+  };
+
   const handlePublish = async () => {
     if (selectedPlatforms.length === 0) {
       toast.error("Select at least one platform");
@@ -240,8 +249,8 @@ function GenerateAdsPage() {
     try {
       const adId = publishingAd?.id || publishingVideo?.id;
       if (!adId) throw new Error("No ad selected");
-      const content = publishingAd?.content || publishingVideo?.content;
-      await publishAdToSocial(adId, selectedPlatforms, content, scheduleTime || undefined);
+      const caption = getCleanCaption();
+      await publishAdToSocial(adId, selectedPlatforms, caption, scheduleTime || undefined);
       toast.success(`Published to ${selectedPlatforms.join(", ")}!`);
       setShowPublishModal(false);
       setSelectedPlatforms([]);
@@ -483,9 +492,7 @@ function GenerateAdsPage() {
                       disabled={isGenerating}
                       className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                     >
-                      {isGenerating ? (
-                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating ads (this may take 1-2 min)...</>
-                      ) : (
+                      {isGenerating ? "Generating..." : (
                         <><Sparkles className="w-5 h-5 mr-2" />Generate 3 Image Ad Creatives</>
                       )}
                     </Button>
@@ -664,9 +671,7 @@ function GenerateAdsPage() {
                       disabled={isGeneratingVideo || !selectedAvatar}
                       className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                     >
-                      {isGeneratingVideo ? (
-                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating video (2-3 min)...</>
-                      ) : (
+                      {isGeneratingVideo ? "Generating..." : (
                         <><Video className="w-5 h-5 mr-2" />Generate Video Ad</>
                       )}
                     </Button>
@@ -730,69 +735,175 @@ function GenerateAdsPage() {
             </Tabs>
           </div>
         </div>
+
+        {/* Global Loading Screens */}
+        <AdLoadingScreen isVisible={isGenerating} type="image" />
+        <AdLoadingScreen isVisible={isGeneratingVideo} type="video" />
       </SidebarInset>
 
-      {/* Publish Modal */}
+      {/* Publish Modal with Phone Mockup Preview */}
       <Dialog open={showPublishModal} onOpenChange={setShowPublishModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Globe className="w-5 h-5 text-green-600" />
               Publish to Social Media
             </DialogTitle>
             <DialogDescription>
-              Choose the platforms you want to publish this ad to.
+              Preview how your post will appear, then choose platforms to publish.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-5 pt-2">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Select Platforms</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {PLATFORMS.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => togglePlatform(p.id)}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all
-                    ${selectedPlatforms.includes(p.id)
-                        ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30"
-                        : "border-gray-200 dark:border-gray-700"}`}
-                  >
-                    <div className={`p-1.5 rounded-lg ${p.color} text-white`}>
-                      <p.icon className="w-4 h-4" />
+          <div className="flex flex-col md:flex-row gap-5 pt-2">
+            {/* Left Column: Phone Mockup Preview */}
+            <div className="flex justify-center flex-shrink-0">
+              <div className="w-[220px] md:w-[280px] bg-black rounded-[2rem] md:rounded-[2.5rem] p-1.5 md:p-2 shadow-2xl">
+                <div className="bg-white dark:bg-gray-900 rounded-[1.75rem] md:rounded-[2rem] overflow-hidden h-[400px] md:h-[500px] flex flex-col">
+                  {/* Status Bar */}
+                  <div className="flex items-center justify-between px-4 md:px-5 py-1 md:py-2 text-[9px] md:text-[10px] font-semibold text-gray-800 dark:text-gray-200">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 md:w-3.5 h-1.5 md:h-2 border border-gray-600 rounded-sm relative"><div className="absolute inset-0.5 bg-green-500 rounded-sm" style={{width:'60%'}} /></div>
                     </div>
-                    <span className="text-sm font-medium">{p.label}</span>
-                    {selectedPlatforms.includes(p.id) && <Check className="w-4 h-4 text-indigo-500 ml-auto" />}
-                  </button>
-                ))}
+                  </div>
+
+                  {/* Platform Header */}
+                  {(() => {
+                    const activePlatform = selectedPlatforms[0] || "instagram";
+                    const pConfig = PLATFORMS.find(p => p.id === activePlatform);
+                    const PlatformIcon = pConfig?.icon || Instagram;
+                    const platformLabel = pConfig?.label || "Instagram";
+                    const platformColor = activePlatform === "instagram" ? "from-purple-600 via-pink-500 to-orange-400"
+                      : activePlatform === "facebook" ? "from-blue-600 to-blue-600"
+                      : activePlatform === "twitter" ? "from-gray-900 to-gray-900"
+                      : "from-blue-700 to-blue-700";
+
+                    return (
+                      <>
+                        <div className={`bg-gradient-to-r ${platformColor} px-3 md:px-4 py-1.5 md:py-2 flex items-center gap-2`}>
+                          <PlatformIcon className="w-4 h-4 text-white" />
+                          <span className="text-white text-[10px] md:text-xs font-bold">{platformLabel}</span>
+                        </div>
+
+                        {/* Post Content */}
+                        <div className="flex-1 overflow-y-auto">
+                          {/* User Row */}
+                          <div className="flex items-center gap-2 md:gap-2.5 px-2.5 md:px-3 py-2 md:py-2.5">
+                            <div className="w-6 md:w-8 h-6 md:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-[8px] md:text-[10px] font-bold ring-2 ring-pink-400">
+                              {profile?.businessName?.charAt(0)?.toUpperCase() || "B"}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] md:text-[11px] font-bold text-gray-900 dark:text-white leading-tight">
+                                {profile?.businessName?.toLowerCase().replace(/\s+/g, '') || "mybusiness"}
+                              </p>
+                              <p className="text-[8px] md:text-[9px] text-gray-500">Sponsored</p>
+                            </div>
+                            <div className="text-gray-400 text-lg">•••</div>
+                          </div>
+
+                          {/* Post Image */}
+                          {publishingAd?.imageUrl && (
+                            <div className="w-full aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                              <img
+                                src={publishingAd.imageUrl.startsWith("http") ? publishingAd.imageUrl : `${BACKEND_URL}${publishingAd.imageUrl}`}
+                                alt="Ad preview"
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).src = `https://via.placeholder.com/500x500/6366f1/fff?text=${encodeURIComponent(publishingAd.headline || 'Ad')}`; }}
+                              />
+                            </div>
+                          )}
+
+                          {/* Action Icons */}
+                          {(activePlatform === "instagram" || activePlatform === "facebook") && (
+                            <div className="flex items-center justify-between px-2.5 md:px-3 py-1.5 md:py-2">
+                              <div className="flex items-center gap-3 md:gap-4">
+                                <Heart className="w-4 md:w-5 h-4 md:h-5 text-gray-800 dark:text-gray-200" />
+                                <MessageCircle className="w-4 md:w-5 h-4 md:h-5 text-gray-800 dark:text-gray-200" />
+                                <SendIcon className="w-4 md:w-5 h-4 md:h-5 text-gray-800 dark:text-gray-200" />
+                              </div>
+                              <Bookmark className="w-4 md:w-5 h-4 md:h-5 text-gray-800 dark:text-gray-200" />
+                            </div>
+                          )}
+
+                          {/* Caption */}
+                          <div className="px-2.5 md:px-3 pb-2 md:pb-3">
+                            <p className="text-[9px] md:text-[11px] text-gray-900 dark:text-gray-100 leading-relaxed">
+                              <span className="font-bold mr-1">
+                                {profile?.businessName?.toLowerCase().replace(/\s+/g, '') || "mybusiness"}
+                              </span>
+                              {getCleanCaption().length > 150
+                                ? getCleanCaption().substring(0, 150) + "..."
+                                : getCleanCaption()
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {/* Bottom Nav Bar */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 py-1.5 md:py-2 px-5 md:px-6 flex justify-around">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="w-4 md:w-5 h-4 md:h-5 rounded-sm bg-gray-300 dark:bg-gray-600" />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-2 mb-1">
-                <Calendar className="w-4 h-4" />Schedule (Optional)
-              </Label>
-              <Input type="datetime-local" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
-              <p className="text-xs text-gray-500 mt-1">Leave empty to publish immediately</p>
-            </div>
-
-            {publishingAd && (
-              <div className={`p-3 rounded-lg text-sm ${isDark ? "bg-gray-700" : "bg-gray-50"}`}>
-                <span className="font-medium">{publishingAd.title}:</span> {publishingAd.headline}
+            {/* Right Column: Controls */}
+            <div className="flex-1 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Select Platforms</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PLATFORMS.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => togglePlatform(p.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all
+                      ${selectedPlatforms.includes(p.id)
+                          ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30"
+                          : "border-gray-200 dark:border-gray-700"}`}
+                    >
+                      <div className={`p-1.5 rounded-lg ${p.color} text-white`}>
+                        <p.icon className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-medium">{p.label}</span>
+                      {selectedPlatforms.includes(p.id) && <Check className="w-4 h-4 text-indigo-500 ml-auto" />}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
 
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowPublishModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                onClick={handlePublish}
-                disabled={isPublishing || selectedPlatforms.length === 0}
-              >
-                {isPublishing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Share2 className="w-4 h-4 mr-2" />}
-                {scheduleTime ? "Schedule Post" : "Publish Now"}
-              </Button>
+              {/* Clean Caption Preview */}
+              <div>
+                <Label className="text-sm font-medium mb-1 block">Caption Preview</Label>
+                <div className={`p-3 rounded-lg text-sm max-h-32 overflow-y-auto whitespace-pre-wrap ${isDark ? "bg-gray-700 text-gray-200" : "bg-gray-50 text-gray-700"}`}>
+                  {getCleanCaption() || "No caption"}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4" />Schedule (Optional)
+                </Label>
+                <Input type="datetime-local" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} />
+                <p className="text-xs text-gray-500 mt-1">Leave empty to publish immediately</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowPublishModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handlePublish}
+                  disabled={isPublishing || selectedPlatforms.length === 0}
+                >
+                  {isPublishing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Share2 className="w-4 h-4 mr-2" />}
+                  {scheduleTime ? "Schedule Post" : "Publish Now"}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

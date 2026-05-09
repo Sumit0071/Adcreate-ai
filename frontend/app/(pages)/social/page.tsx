@@ -12,10 +12,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import {
   Facebook, Instagram, Linkedin, Twitter, Settings, Calendar,
-  Clock, Send, Plus, CheckCircle, RefreshCw, BarChart3, Globe, Loader2, ExternalLink
+  Clock, Send, Plus, CheckCircle, RefreshCw, BarChart3, Globe, Loader2, ExternalLink, Link2
 } from "lucide-react";
-import { getPublishedPosts } from "@/app/api/businessProfile";
+import { getPublishedPosts, getConnectedAccounts, getZernioConnectUrl } from "@/app/api/businessProfile";
 import Link from "next/link";
+import { toast } from "react-toastify";
 
 interface PublishedPost {
   id: number;
@@ -25,24 +26,46 @@ interface PublishedPost {
   scheduledTime?: string;
   publishedAt?: string;
   createdAt: string;
+  externalPostId?: string;
+  zernioPostId?: string;
+  platformPostUrl?: string;
   ad?: { businessProfile?: { businessName: string } };
 }
 
-const PLATFORM_CONFIG: Record<string, { icon: any; color: string; bg: string }> = {
-  Facebook: { icon: Facebook, color: "text-blue-600", bg: "bg-blue-600" },
-  Instagram: { icon: Instagram, color: "text-pink-600", bg: "bg-gradient-to-r from-purple-500 to-pink-500" },
-  LinkedIn: { icon: Linkedin, color: "text-blue-700", bg: "bg-blue-700" },
-  Twitter: { icon: Twitter, color: "text-sky-500", bg: "bg-black" },
+interface ZernioAccount {
+  _id: string;
+  platform: string;
+  username?: string;
+  displayName?: string;
+  profileUrl?: string;
+  isActive: boolean;
+}
+
+// Platform config keyed by lowercase platform name (matching Zernio convention)
+const PLATFORM_CONFIG: Record<string, { icon: any; label: string; color: string; bg: string }> = {
+  facebook: { icon: Facebook, label: "Facebook", color: "text-blue-600", bg: "bg-blue-600" },
+  instagram: { icon: Instagram, label: "Instagram", color: "text-pink-600", bg: "bg-gradient-to-r from-purple-500 to-pink-500" },
+  linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-blue-700", bg: "bg-blue-700" },
+  twitter: { icon: Twitter, label: "Twitter/X", color: "text-sky-500", bg: "bg-black" },
+  tiktok: { icon: Globe, label: "TikTok", color: "text-gray-800", bg: "bg-gray-800" },
+  youtube: { icon: Globe, label: "YouTube", color: "text-red-600", bg: "bg-red-600" },
+  pinterest: { icon: Globe, label: "Pinterest", color: "text-red-500", bg: "bg-red-600" },
+  bluesky: { icon: Globe, label: "Bluesky", color: "text-blue-500", bg: "bg-blue-500" },
+  threads: { icon: Globe, label: "Threads", color: "text-gray-800", bg: "bg-gray-800" },
 };
+
+/** Normalize platform name for PLATFORM_CONFIG lookup (handles UPPERCASE from DB, PascalCase, lowercase) */
+function normalizePlatform(platform: string): string {
+  return platform.toLowerCase();
+}
 
 export default function SocialPage() {
   const [posts, setPosts] = useState<PublishedPost[]>([]);
+  const [connectedAccounts, setConnectedAccounts] = useState<ZernioAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  const [manualPost, setManualPost] = useState({ platform: "Facebook", content: "", scheduledTime: "" });
-  const [autoPost, setAutoPost] = useState<Record<string, boolean>>({
-    Facebook: true, Instagram: true, LinkedIn: false, Twitter: false
-  });
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
 
   const loadPosts = async () => {
     setIsLoading(true);
@@ -53,30 +76,56 @@ export default function SocialPage() {
       }
     } catch (error) {
       console.error("Error loading posts:", error);
-      // Fallback demo data
-      setPosts([
-        {
-          id: 1, platform: "Facebook",
-          content: "Transform Your Business Today - Join thousands who've discovered our AI-powered solution...",
-          status: "PUBLISHED",
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          ad: { businessProfile: { businessName: "My Business" } }
-        },
-        {
-          id: 2, platform: "Instagram",
-          content: "Finally, A Solution That Understands You - We know how challenging it can be...",
-          status: "SCHEDULED",
-          scheduledTime: new Date(Date.now() + 3600000 * 3).toISOString(),
-          createdAt: new Date().toISOString(),
-          ad: { businessProfile: { businessName: "My Business" } }
-        },
-      ]);
+      setPosts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => { loadPosts(); }, []);
+  const loadAccounts = async () => {
+    setIsLoadingAccounts(true);
+    try {
+      const data = await getConnectedAccounts();
+      if (data?.success) {
+        setConnectedAccounts(data.accounts || []);
+      }
+    } catch (error) {
+      console.error("Error loading connected accounts:", error);
+      setConnectedAccounts([]);
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPosts();
+    loadAccounts();
+  }, []);
+
+  const handleConnectPlatform = async (platform: string) => {
+    setConnectingPlatform(platform);
+    try {
+      // For now, we need a profileId. In a full implementation, the user would select
+      // or create a Zernio profile first. Here we use a placeholder prompt.
+      const profileId = prompt("Enter your Zernio Profile ID (from /social/profiles):");
+      if (!profileId) {
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const data = await getZernioConnectUrl(platform, profileId, window.location.href);
+      if (data?.success && data.authUrl) {
+        window.open(data.authUrl, "_blank");
+        toast.info(`Redirecting to ${platform} for authorization...`);
+      } else {
+        toast.error("Failed to get connect URL");
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to connect");
+    } finally {
+      setConnectingPlatform(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -91,8 +140,25 @@ export default function SocialPage() {
     }
   };
 
+  // Check if a platform has a connected Zernio account
+  const isConnected = (platform: string): boolean => {
+    return connectedAccounts.some(
+      (acc) => acc.platform.toLowerCase() === platform.toLowerCase() && acc.isActive
+    );
+  };
+
+  // Get account info for a platform
+  const getAccountInfo = (platform: string): ZernioAccount | undefined => {
+    return connectedAccounts.find(
+      (acc) => acc.platform.toLowerCase() === platform.toLowerCase() && acc.isActive
+    );
+  };
+
   const publishedPosts = posts.filter((p) => p.status === "PUBLISHED");
   const scheduledPosts = posts.filter((p) => p.status === "SCHEDULED");
+
+  // Get unique platforms from connected accounts + core platforms
+  const allPlatforms = ["facebook", "instagram", "linkedin", "twitter"];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -104,14 +170,18 @@ export default function SocialPage() {
               <Globe className="w-6 h-6 text-green-600" />
               Social Media Publishing
             </h1>
-            <p className="text-gray-500 text-sm mt-1">Manage your ad posts across all platforms</p>
+            <p className="text-gray-500 text-sm mt-1">
+              Manage your ad posts across all platforms via Zernio
+              {connectedAccounts.length > 0 && (
+                <span className="ml-2 text-green-600 font-medium">
+                  • {connectedAccounts.length} account{connectedAccounts.length !== 1 ? "s" : ""} connected
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={loadPosts}>
+            <Button variant="outline" size="sm" onClick={() => { loadPosts(); loadAccounts(); }}>
               <RefreshCw className="w-4 h-4 mr-2" />Refresh
-            </Button>
-            <Button size="sm" onClick={() => setShowScheduleDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />Schedule Post
             </Button>
             <Link href="/generate-ads">
               <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
@@ -132,36 +202,61 @@ export default function SocialPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(PLATFORM_CONFIG).map(([platform, config]) => (
-                <div key={platform} className="flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${config.bg} text-white`}>
-                      <config.icon className="w-5 h-5" />
+            {isLoadingAccounts ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-indigo-600 mr-2" />
+                <span className="text-sm text-gray-500">Loading connected accounts...</span>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {allPlatforms.map((platform) => {
+                  const config = PLATFORM_CONFIG[platform];
+                  if (!config) return null;
+                  const connected = isConnected(platform);
+                  const account = getAccountInfo(platform);
+                  const postCount = posts.filter(
+                    (p) => normalizePlatform(p.platform) === platform
+                  ).length;
+
+                  return (
+                    <div key={platform} className="flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${config.bg} text-white`}>
+                          <config.icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{config.label}</p>
+                          <p className="text-xs text-gray-500">
+                            {connected
+                              ? account?.username || account?.displayName || `${postCount} posts`
+                              : "Not connected"
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {connected ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleConnectPlatform(platform)}
+                            disabled={connectingPlatform === platform}
+                          >
+                            {connectingPlatform === platform ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <><Link2 className="w-3 h-3 mr-1" />Connect</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-sm">{platform}</p>
-                      <p className="text-xs text-gray-500">
-                        {posts.filter((p) => p.platform === platform).length} posts
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-500">Auto</span>
-                      <Switch
-                        checked={autoPost[platform]}
-                        onCheckedChange={(val) => setAutoPost((prev) => ({ ...prev, [platform]: val }))}
-                      />
-                    </div>
-                    {autoPost[platform]
-                      ? <CheckCircle className="w-4 h-4 text-green-500" />
-                      : <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
-                    }
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -171,7 +266,7 @@ export default function SocialPage() {
             { label: "Total Posts", value: posts.length, color: "text-indigo-600", bg: "bg-indigo-50" },
             { label: "Published", value: publishedPosts.length, color: "text-green-600", bg: "bg-green-50" },
             { label: "Scheduled", value: scheduledPosts.length, color: "text-blue-600", bg: "bg-blue-50" },
-            { label: "Platforms", value: new Set(posts.map(p => p.platform)).size, color: "text-purple-600", bg: "bg-purple-50" },
+            { label: "Platforms", value: new Set(posts.map(p => normalizePlatform(p.platform))).size, color: "text-purple-600", bg: "bg-purple-50" },
           ].map(({ label, value, color, bg }) => (
             <div key={label} className={`${bg} rounded-xl p-4 border`}>
               <div className={`text-2xl font-bold ${color}`}>{value}</div>
@@ -209,7 +304,8 @@ export default function SocialPage() {
                     </Card>
                   ) : (
                     (tab === "all" ? posts : tab === "published" ? publishedPosts : scheduledPosts).map((post) => {
-                      const platformCfg = PLATFORM_CONFIG[post.platform];
+                      const normalizedPlatform = normalizePlatform(post.platform);
+                      const platformCfg = PLATFORM_CONFIG[normalizedPlatform];
                       return (
                         <Card key={post.id} className="hover:shadow-md transition-shadow">
                           <CardContent className="p-5">
@@ -219,10 +315,15 @@ export default function SocialPage() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span className="font-semibold">{post.platform}</span>
+                                  <span className="font-semibold">{platformCfg?.label || post.platform}</span>
                                   {getStatusBadge(post.status)}
                                   {post.ad?.businessProfile?.businessName && (
                                     <Badge variant="outline" className="text-xs">{post.ad.businessProfile.businessName}</Badge>
+                                  )}
+                                  {post.externalPostId && (
+                                    <Badge variant="outline" className="text-xs font-mono">
+                                      Zernio: {post.externalPostId.slice(0, 8)}...
+                                    </Badge>
                                   )}
                                 </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
@@ -243,10 +344,12 @@ export default function SocialPage() {
                                     <BarChart3 className="w-4 h-4 mr-1" />Analytics
                                   </Button>
                                 </Link>
-                                {post.status === "SCHEDULED" && (
-                                  <Button size="sm" variant="outline">
-                                    <Send className="w-4 h-4" />
-                                  </Button>
+                                {post.platformPostUrl && (
+                                  <a href={post.platformPostUrl} target="_blank" rel="noopener noreferrer">
+                                    <Button size="sm" variant="outline">
+                                      <ExternalLink className="w-4 h-4" />
+                                    </Button>
+                                  </a>
                                 )}
                               </div>
                             </div>
@@ -261,63 +364,6 @@ export default function SocialPage() {
           ))}
         </Tabs>
       </div>
-
-      {/* Schedule Dialog */}
-      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Schedule a Post</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <Label className="text-sm font-medium">Platform</Label>
-              <select
-                value={manualPost.platform}
-                onChange={(e) => setManualPost((p) => ({ ...p, platform: e.target.value }))}
-                className="w-full mt-1 p-2 border rounded-lg text-sm">
-                {Object.keys(PLATFORM_CONFIG).map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Post Content</Label>
-              <Textarea
-                value={manualPost.content}
-                onChange={(e) => setManualPost((p) => ({ ...p, content: e.target.value }))}
-                placeholder="Write your post content..."
-                className="mt-1"
-                rows={4}
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="w-4 h-4" />Schedule Time
-              </Label>
-              <Input
-                type="datetime-local"
-                value={manualPost.scheduledTime}
-                onChange={(e) => setManualPost((p) => ({ ...p, scheduledTime: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-            <p className="text-xs text-gray-500 text-center">
-              To publish ad creatives, go to{" "}
-              <Link href="/generate-ads" className="text-indigo-600 hover:underline">Generate Ads</Link>{" "}
-              and use the Publish button on any generated ad.
-            </p>
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
-              <Button className="flex-1" onClick={() => {
-                setShowScheduleDialog(false);
-                alert("Manual scheduling coming soon! Use the Publish button from generated ads.");
-              }}>
-                Schedule
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

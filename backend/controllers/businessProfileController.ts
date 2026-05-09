@@ -80,10 +80,63 @@ export const getBusinessProfiles = async (req: Request, res: Response) => {
     const profiles = await prisma.businessProfile.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        businessName: true,
+        niche: true,
+        productService: true,
+        targetAudience: true,
+        adGoal: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { ads: true } },
+      },
     });
     return res.status(200).json({ success: true, businessProfiles: profiles });
   } catch (error) {
     console.error("Error fetching business profiles:", error);
+    return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
+export const getUserAds = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized", success: false });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const take = Math.min(50, Math.max(1, parseInt(req.query.take as string) || 20));
+    const skip = (page - 1) * take;
+
+    const [ads, totalCount] = await Promise.all([
+      prisma.ad.findMany({
+        where: { businessProfile: { userId } },
+        orderBy: { generatedAt: "desc" },
+        skip,
+        take,
+        select: {
+          id: true,
+          imageUrl: true,
+          isVideo: true,
+          generatedAt: true,
+          businessProfile: {
+            select: { id: true, businessName: true },
+          },
+          _count: { select: { publishedPosts: true } },
+        },
+      }),
+      prisma.ad.count({ where: { businessProfile: { userId } } }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      ads,
+      pagination: { page, take, totalCount, totalPages: Math.ceil(totalCount / take) },
+    });
+  } catch (error) {
+    console.error("Error fetching user ads:", error);
     return res.status(500).json({ message: "Internal server error", success: false });
   }
 };

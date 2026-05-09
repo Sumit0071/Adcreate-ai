@@ -1,215 +1,239 @@
 import { Request, Response } from "express";
 import prisma from "../config/prisma";
+import Zernio from "@zernio/node";
 import axios from "axios";
 
-// ─── Facebook / Instagram Graph API helpers ───────────────────────────────────
+const zernio = new Zernio({ apiKey: process.env.ZERNIO_API_KEY });
 
-const FB_GRAPH = "https://graph.facebook.com/v19.0";
-const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN || "";
-const FB_PAGE_ID = process.env.FACEBOOK_PAGE_ID || "";
-const IG_ACCOUNT_ID = process.env.INSTAGRAM_ACCOUNT_ID || "";
+// ─── Helper: upload media to Zernio via presigned URL ─────────────────────────
 
-/**
- * Post a text + optional image to a Facebook Page via Graph API.
- * Returns { success, postId?, error? }
- */
-async function postToFacebook(message: string, imageUrl?: string, isVideo?: boolean): Promise<{ success: boolean; postId?: string; error?: string }> {
-  if (!PAGE_ACCESS_TOKEN || !FB_PAGE_ID) {
-    return { success: false, error: "FACEBOOK_PAGE_ID or FACEBOOK_ACCESS_TOKEN not set in env" };
+async function uploadMediaToZernio(mediaUrl: string, isVideo: boolean): Promise<string> {
+  const urlPath = new URL(mediaUrl).pathname;
+  const fileName = urlPath.split("/").pop() || (isVideo ? "video.mp4" : "image.jpg");
+  const fileType = isVideo ? "video/mp4" : fileName.endsWith(".png") ? "image/png" : "image/jpeg";
+
+  const presignResult: any = await zernio.media.getMediaPresignedUrl({ body: { filename: fileName, contentType: fileType } });
+  const uploadUrl = presignResult?.uploadUrl || presignResult?.data?.uploadUrl;
+  const publicUrl = presignResult?.publicUrl || presignResult?.data?.publicUrl;
+  if (!uploadUrl || !publicUrl) {
+    throw new Error(`Presign response missing URLs: ${JSON.stringify(presignResult)}`);
   }
-  try {
-    let endpoint: string;
-    let payload: Record<string, string>;
 
-    if (imageUrl) {
-      if (isVideo) {
-        // Video post
-        endpoint = `${FB_GRAPH}/${FB_PAGE_ID}/videos`;
-        payload = { file_url: imageUrl, description: message, access_token: PAGE_ACCESS_TOKEN };
-      } else {
-        // Photo post
-        endpoint = `${FB_GRAPH}/${FB_PAGE_ID}/photos`;
-        payload = { url: imageUrl, caption: message, access_token: PAGE_ACCESS_TOKEN };
-      }
-    } else {
-      // Text-only post
-      endpoint = `${FB_GRAPH}/${FB_PAGE_ID}/feed`;
-      payload = { message, access_token: PAGE_ACCESS_TOKEN };
-    }
+  const mediaResponse = await axios.get(mediaUrl, { responseType: "arraybuffer" });
+  const fileBuffer = Buffer.from(mediaResponse.data);
 
-    const res = await axios.post(endpoint, payload);
-    const postId = res.data?.id || res.data?.post_id;
-    console.log(`✅ Facebook post created: ${postId}`);
-    return { success: true, postId };
-  } catch (err: any) {
-    const fbError = err.response?.data?.error?.message || err.message;
-    console.error("❌ Facebook post failed:", fbError);
-    return { success: false, error: fbError };
-  }
+  await axios.put(uploadUrl, fileBuffer, {
+    headers: { "Content-Type": fileType },
+    maxBodyLength: Infinity,
+    maxContentLength: Infinity,
+  });
+
+  return publicUrl;
 }
 
-/**
- * Publish an image post to an Instagram Business Account via Graph API.
- * Requires an image URL (Instagram API doesn't accept text-only posts).
- * Returns { success, mediaId?, error? }
- */
-async function postToInstagram(caption: string, imageUrl?: string, isVideo?: boolean): Promise<{ success: boolean; mediaId?: string; error?: string }> {
-  if (!PAGE_ACCESS_TOKEN || !IG_ACCOUNT_ID) {
-    return { success: false, error: "INSTAGRAM_ACCOUNT_ID or FACEBOOK_ACCESS_TOKEN not set in env" };
-  }
-  if (!imageUrl) {
-    return { success: false, error: "Instagram requires an image/video URL. Text-only posts are not supported." };
-  }
-  try {
-    // Step 1: Create media container
-    const payload: any = {
-      caption,
-      access_token: PAGE_ACCESS_TOKEN,
-    };
-    if (isVideo) {
-      payload.video_url = imageUrl;
-      payload.media_type = 'VIDEO';
-    } else {
-      payload.image_url = imageUrl;
-    }
-    const containerRes = await axios.post(`${FB_GRAPH}/${IG_ACCOUNT_ID}/media`, payload);
-    const containerId = containerRes.data?.id;
-    if (!containerId) throw new Error("No container ID returned from Instagram");
+// ─── Helper: resolve platform names to Zernio account IDs ─────────────────────
 
-    // Step 2: Publish the container
-    const publishRes = await axios.post(`${FB_GRAPH}/${IG_ACCOUNT_ID}/media_publish`, {
-      creation_id: containerId,
-      access_token: PAGE_ACCESS_TOKEN,
+async function getZernioAccountsMap(): Promise<Map<string, { accountId: string; platform: string }>> {
+  const result: any = await zernio.accounts.listAccounts();
+  // SDK may return { accounts }, { data: { accounts } }, or the array directly
+  const accounts: any[] = result?.accounts || result?.data?.accounts || (Array.isArray(result) ? result : []);
+  const map = new Map<string, { accountId: string; platform: string }>();
+  for (const account of accounts) {
+    const key = account.platform.toLowerCase();
+    if (!map.has(key) && account.isActive) {
+      map.set(key, { accountId: account._id, platform: account.platform });
+    }
+  }
+  return map;
+}
+
+// ─── GET /social/connect-url ──────────────────────────────────────────────────
+
+export const getConnectUrl = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized", success: false });
+
+    const { platform, profileId, redirectUrl } = req.query;
+    if (!platform || !profileId) {
+      return res.status(400).json({ message: "platform and profileId query params are required", success: false });
+    }
+
+    const result: any = await zernio.connect.getConnectUrl({
+      platform: platform as string,
+      profileId: profileId as string,
+      ...(redirectUrl ? { redirectUrl: redirectUrl as string } : {}),
     });
-    const mediaId = publishRes.data?.id;
-    console.log(`✅ Instagram post published: ${mediaId}`);
-    return { success: true, mediaId };
-  } catch (err: any) {
-    const igError = err.response?.data?.error?.message || err.message;
-    console.error("❌ Instagram post failed:", igError);
-    return { success: false, error: igError };
-  }
-}
 
-/**
- * LinkedIn posting requires OAuth per user (user-level access token).
- * This placeholder returns instructions — full OAuth would be a separate flow.
- */
-async function postToLinkedIn(_message: string): Promise<{ success: boolean; error?: string }> {
-  return { success: false, error: "LinkedIn posting requires user OAuth — not yet configured. Add LINKEDIN_ACCESS_TOKEN to enable." };
-}
-
-/**
- * Twitter/X posting requires OAuth 2.0 + user context.
- * Placeholder until TWITTER_BEARER_TOKEN is configured.
- */
-async function postToTwitter(_message: string): Promise<{ success: boolean; error?: string }> {
-  return { success: false, error: "Twitter/X posting requires OAuth 2.0 user context — not yet configured. Add TWITTER_ACCESS_TOKEN to enable." };
-}
-
-// ─── Main platform dispatcher ─────────────────────────────────────────────────
-
-async function publishToPlatform(
-  platform: string,
-  message: string,
-  imageUrl?: string,
-  isVideo?: boolean
-): Promise<{ success: boolean; externalId?: string; error?: string }> {
-  const p = platform.toUpperCase();
-  if (p === "FACEBOOK") {
-    const r = await postToFacebook(message, imageUrl, isVideo);
-    return { success: r.success, externalId: r.postId, error: r.error };
+    return res.status(200).json({ success: true, authUrl: result?.authUrl || result?.data?.authUrl });
+  } catch (error: any) {
+    console.error("Error getting connect URL:", error);
+    return res.status(500).json({ message: error.message || "Failed to get connect URL", success: false });
   }
-  if (p === "INSTAGRAM") {
-    const r = await postToInstagram(message, imageUrl, isVideo);
-    return { success: r.success, externalId: r.mediaId, error: r.error };
-  }
-  if (p === "LINKEDIN") {
-    const r = await postToLinkedIn(message);
-    return { success: r.success, error: r.error };
-  }
-  if (p === "TWITTER" || p === "X") {
-    const r = await postToTwitter(message);
-    return { success: r.success, error: r.error };
-  }
-  return { success: false, error: `Unknown platform: ${platform}` };
-}
+};
 
-// ─── Controllers ──────────────────────────────────────────────────────────────
+// ─── GET /social/accounts ─────────────────────────────────────────────────────
+
+export const getConnectedAccounts = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized", success: false });
+
+    const { platform, profileId } = req.query;
+    const result: any = await zernio.accounts.listAccounts({
+      ...(platform ? { platform: platform as string } : {}),
+      ...(profileId ? { profileId: profileId as string } : {}),
+    });
+    const accounts = result?.accounts || result?.data?.accounts || (Array.isArray(result) ? result : []);
+
+    return res.status(200).json({ success: true, accounts });
+  } catch (error: any) {
+    console.error("Error listing accounts:", error);
+    return res.status(500).json({ message: error.message || "Failed to list connected accounts", success: false });
+  }
+};
+
+// ─── POST /social/profiles ────────────────────────────────────────────────────
+
+export const createZernioProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized", success: false });
+
+    const { name, description } = req.body;
+    if (!name) return res.status(400).json({ message: "Profile name is required", success: false });
+
+    const result: any = await zernio.profiles.createProfile({
+      name,
+      ...(description ? { description } : {}),
+    });
+
+    return res.status(201).json({ success: true, profile: result?.profile || result?.data?.profile || result });
+  } catch (error: any) {
+    console.error("Error creating Zernio profile:", error);
+    return res.status(500).json({ message: error.message || "Failed to create profile", success: false });
+  }
+};
+
+// ─── POST /social/publish ─────────────────────────────────────────────────────
 
 export const publishAd = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).id;
     if (!userId) return res.status(401).json({ message: "Unauthorized", success: false });
 
-    const { adId, platforms, scheduledTime, content } = req.body;
-
+    const { adId, platforms, accountIds, scheduledTime, timezone, content } = req.body;
     if (!adId || !platforms || !Array.isArray(platforms) || platforms.length === 0) {
       return res.status(400).json({ message: "Ad ID and platforms are required", success: false });
     }
 
-    // Verify the ad belongs to the user
     const ad = await (prisma as any).ad.findFirst({
       where: { id: Number(adId), businessProfile: { userId } },
       include: { businessProfile: true },
     });
-
     if (!ad) return res.status(404).json({ message: "Ad not found", success: false });
 
     const postContent = content || ad.content;
     const imageUrl: string | undefined = ad.imageUrl || undefined;
     const isVideo: boolean = ad.isVideo || false;
 
-    // For each platform: publish now OR schedule
-    const results = await Promise.all(
-      platforms.map(async (platform: string) => {
-        let externalId: string | null = null;
-        let status = "PUBLISHED";
-        let publishError: string | null = null;
+    // Resolve Zernio account IDs
+    const zernioAccountsMap = await getZernioAccountsMap();
+    const zernioPlatforms: Array<{ platform: string; accountId: string }> = [];
+    const missingPlatforms: string[] = [];
 
-        if (!scheduledTime) {
-          // Publish immediately to the real platform
-          const result = await publishToPlatform(platform, postContent, imageUrl, isVideo);
-          externalId = result.externalId || null;
-          publishError = result.error || null;
-          status = result.success ? "PUBLISHED" : "FAILED";
-          if (!result.success) {
-            console.warn(`⚠️ ${platform} publish failed: ${result.error}`);
-          }
-        } else {
-          status = "SCHEDULED";
+    for (const platform of platforms) {
+      const p = platform.toLowerCase();
+      const explicit = accountIds?.[p];
+      const resolved = zernioAccountsMap.get(p);
+
+      if (explicit) {
+        zernioPlatforms.push({ platform: p, accountId: explicit });
+      } else if (resolved) {
+        zernioPlatforms.push({ platform: resolved.platform, accountId: resolved.accountId });
+      } else {
+        missingPlatforms.push(p);
+      }
+    }
+
+    if (zernioPlatforms.length === 0) {
+      return res.status(400).json({
+        message: `No connected Zernio accounts found for: ${missingPlatforms.join(", ")}. Connect them first via /social/connect-url.`,
+        success: false,
+      });
+    }
+
+    // Upload media if present
+    let mediaItems: Array<{ url: string; type: string }> | undefined;
+    if (imageUrl) {
+      try {
+        const publicUrl = await uploadMediaToZernio(imageUrl, isVideo);
+        mediaItems = [{ url: publicUrl, type: isVideo ? "video" : "image" }];
+      } catch (uploadErr: any) {
+        console.warn("⚠️ Media upload to Zernio failed:", uploadErr.message);
+        // Instagram/TikTok/Pinterest require media — block those platforms
+        const mediaRequiredPlatforms = ["instagram", "tiktok", "pinterest"];
+        const needsMedia = zernioPlatforms.some((p) => mediaRequiredPlatforms.includes(p.platform.toLowerCase()));
+        if (needsMedia) {
+          return res.status(400).json({
+            message: `Media upload failed and some selected platforms (Instagram, TikTok, Pinterest) require media. Error: ${uploadErr.message}`,
+            success: false,
+          });
         }
+        // For text-friendly platforms (twitter, facebook, linkedin), continue without media
+      }
+    }
 
+    // Build Zernio post payload (SDK expects { body: { ... } })
+    const postBody: any = { content: postContent, platforms: zernioPlatforms };
+    if (mediaItems) postBody.mediaItems = mediaItems;
+
+    if (scheduledTime) {
+      postBody.scheduledFor = new Date(scheduledTime).toISOString();
+      postBody.timezone = timezone || "UTC";
+    } else {
+      postBody.publishNow = true;
+    }
+
+    console.log("📤 Zernio createPost payload:", JSON.stringify({ body: postBody }, null, 2));
+    const zernioResult: any = await zernio.posts.createPost({ body: postBody });
+    const zernioPost = zernioResult?.post || zernioResult?.data?.post || zernioResult;
+    const postStatus = scheduledTime ? "SCHEDULED" : "PUBLISHED";
+
+    // Save to local DB
+    const dbRecords = await Promise.all(
+      zernioPlatforms.map(async (pf) => {
+        const platformResult = zernioPost?.platforms?.find((zp: any) => zp.platform === pf.platform);
         const record = await (prisma as any).publishedPost.create({
           data: {
             adId: Number(adId),
-            platform,
+            platform: pf.platform.toUpperCase(),
             content: postContent,
             scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
-            status,
-            publishedAt: status === "PUBLISHED" ? new Date() : null,
-            externalPostId: externalId,
+            status: postStatus,
+            publishedAt: postStatus === "PUBLISHED" ? new Date() : null,
+            externalPostId: zernioPost?._id || null,
           },
         });
-
-        return { ...record, publishError };
+        return { ...record, zernioPostId: zernioPost?._id, platformPostUrl: platformResult?.platformPostUrl || null };
       })
     );
 
-    const succeeded = results.filter((r: any) => r.status === "PUBLISHED" || r.status === "SCHEDULED");
-    const failed = results.filter((r: any) => r.status === "FAILED");
-
     return res.status(201).json({
       success: true,
-      message: `Published to ${succeeded.length} platform(s)${failed.length > 0 ? `, failed on ${failed.length} platform(s)` : ""}`,
-      publishedPosts: results,
-      errors: failed.map((f: any) => ({ platform: f.platform, error: f.publishError })),
+      message: `${postStatus === "SCHEDULED" ? "Scheduled" : "Published"} to ${zernioPlatforms.length} platform(s)${missingPlatforms.length > 0 ? `. Missing accounts for: ${missingPlatforms.join(", ")}` : ""}`,
+      zernioPostId: zernioPost?._id,
+      publishedPosts: dbRecords,
+      missingPlatforms: missingPlatforms.length > 0 ? missingPlatforms : undefined,
     });
   } catch (error: any) {
     console.error("Error publishing ad:", error);
-    return res.status(500).json({ message: error.message || "Internal server error", success: false });
+    const errorMessage = error?.response?.data?.error || error.message || "Internal server error";
+    return res.status(500).json({ message: errorMessage, success: false });
   }
 };
+
+// ─── GET /social/posts ────────────────────────────────────────────────────────
 
 export const getPublishedPosts = async (req: Request, res: Response) => {
   try {
@@ -229,6 +253,8 @@ export const getPublishedPosts = async (req: Request, res: Response) => {
   }
 };
 
+// ─── POST /social/track ──────────────────────────────────────────────────────
+
 export const trackAnalyticsEvent = async (req: Request, res: Response) => {
   try {
     const { postId, eventType } = req.body;
@@ -244,6 +270,8 @@ export const trackAnalyticsEvent = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Internal server error", success: false });
   }
 };
+
+// ─── GET /social/analytics ───────────────────────────────────────────────────
 
 export const getAnalyticsSummary = async (req: Request, res: Response) => {
   try {
@@ -291,18 +319,50 @@ export const getAnalyticsSummary = async (req: Request, res: Response) => {
       conversions: post.analytics.filter((e: any) => e.eventType === "CONVERSION").length,
       ctr: post.analytics.filter((e: any) => e.eventType === "IMPRESSION").length > 0
         ? ((post.analytics.filter((e: any) => e.eventType === "CLICK").length /
-            post.analytics.filter((e: any) => e.eventType === "IMPRESSION").length) * 100).toFixed(2)
+          post.analytics.filter((e: any) => e.eventType === "IMPRESSION").length) * 100).toFixed(2)
         : "0",
     }));
+
+    // Zernio platform analytics (best effort — may require analytics add-on)
+    let zernioAnalytics: any = null;
+    try {
+      const fromDate = daysAgo.toISOString().split("T")[0];
+      const toDate = new Date().toISOString().split("T")[0];
+      const zernioResult = await zernio.analytics.getAnalytics({ fromDate, toDate, limit: 50 });
+      zernioAnalytics = zernioResult.data;
+    } catch (zernioErr: any) {
+      console.warn("Zernio analytics fetch failed:", zernioErr.message);
+    }
 
     return res.status(200).json({
       success: true,
       summary: { totalPosts: posts.length, totalImpressions, totalClicks, totalConversions, ctr, conversionRate },
       platformBreakdown,
       adPerformance,
+      zernioAnalytics,
     });
   } catch (error) {
     console.error("Error fetching analytics:", error);
     return res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
+// ─── GET /social/zernio-analytics/:postId ─────────────────────────────────────
+
+export const getZernioPostAnalytics = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized", success: false });
+
+    const { postId } = req.params;
+    if (!postId) return res.status(400).json({ message: "Post ID is required", success: false });
+
+    const result = await zernio.analytics.getAnalytics({ postId });
+    return res.status(200).json({ success: true, analytics: result.data });
+  } catch (error: any) {
+    const statusCode = error?.response?.status || 500;
+    const errorMessage = error?.response?.data?.error || error.message || "Failed to fetch analytics";
+    console.error("Error fetching Zernio post analytics:", errorMessage);
+    return res.status(statusCode).json({ message: errorMessage, success: false });
   }
 };

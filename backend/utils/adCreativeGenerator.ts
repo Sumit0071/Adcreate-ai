@@ -1,6 +1,5 @@
 import { GoogleGenAI, GenerateContentConfig } from "@google/genai";
-import axios from "axios";
-import FormData from "form-data";
+import { InferenceClient } from "@huggingface/inference";
 
 export interface AdData {
   businessname: string;
@@ -26,7 +25,7 @@ const CONFIG = {
   cooldownBetweenCallsMs: 3_000,
   textModel: "gemini-3-flash-preview",
   // ✅ Correct model name for Gemini image generation
-  imageModel: "gemini-3.1-flash-image-preview",
+  imageModel: "gemini-2.5-flash-image",
 };
 
 const wait = (ms: number) => new Promise((res) => setTimeout(res, ms));
@@ -96,45 +95,36 @@ Design: modern, vibrant colors, bold readable text showing business name "${busi
         return imageBuffer;
       }
     }
-    console.warn("⚠️ Gemini returned no image data — trying Stability AI fallback...");
+    console.warn("⚠️ Gemini returned no image data — trying fal-ai fallback...");
   } catch (err: any) {
     console.warn("⚠️ Gemini image generation failed:", err.message || err);
-    console.log("🔄 Falling back to Stability AI...");
+    console.log("🔄 Falling back to HuggingFace (fal-ai)...");
   }
 
-  // ── Attempt 2: Stability AI fallback ──────────────────────────────────
-  const stabilityKey = process.env.STABILITY_API_KEY;
-  if (stabilityKey) {
+  // ── Attempt 2: HuggingFace / fal-ai fallback (ERNIE-Image) ─────────────
+  const hfToken = process.env.HF_TOKEN;
+  if (hfToken) {
     try {
-      console.log("🎨 Attempting Stability AI image generation...");
-      const formData = new FormData();
-      formData.append("prompt", imagePrompt.substring(0, 2000));
-      formData.append("output_format", "png");
-      formData.append("aspect_ratio", "16:9");
-      formData.append("style_preset", "digital-art");
+      console.log("🎨 Attempting HuggingFace (fal-ai) image generation...");
+      const hfClient = new InferenceClient(hfToken);
 
-      const stabilityRes = await axios.post(
-        "https://api.stability.ai/v2beta/stable-image/generate/core",
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-            Authorization: `Bearer ${stabilityKey}`,
-            Accept: "image/*",
-          },
-          responseType: "arraybuffer",
-          timeout: 60_000,
-        }
-      );
+      const imageResult: any = await hfClient.textToImage({
+        provider: "fal-ai",
+        model: "Tongyi-MAI/Z-Image-Turbo",
+        inputs: imagePrompt.substring(0, 2000),
+        parameters: { num_inference_steps: 25 },
+      });
 
-      const imageBuffer = Buffer.from(stabilityRes.data);
-      console.log(`✅ Stability AI image generated (${(imageBuffer.length / 1024).toFixed(0)} KB)`);
+      // textToImage returns a Blob at runtime (despite TS types saying string)
+      const arrayBuffer = await imageResult.arrayBuffer();
+      const imageBuffer = Buffer.from(arrayBuffer);
+      console.log(`✅ HuggingFace (fal-ai) image generated (${(imageBuffer.length / 1024).toFixed(0)} KB)`);
       return imageBuffer;
-    } catch (stabErr: any) {
-      console.error("❌ Stability AI fallback also failed:", stabErr.message || stabErr);
+    } catch (falErr: any) {
+      console.error("❌ HuggingFace (fal-ai) fallback also failed:", falErr.message || falErr);
     }
   } else {
-    console.warn("⚠️ STABILITY_API_KEY not set — image generation skipped.");
+    console.warn("⚠️ HF_TOKEN not set — fal-ai image generation skipped.");
   }
 
   return null;

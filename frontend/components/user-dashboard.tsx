@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Plus, Search, Eye, Edit, Trash2, Download, Share2,
-  TrendingUp, Target, Sparkles, DollarSign, Loader2,
-  Building2, BarChart3, Video, Globe
+  Plus, Search, Sparkles, Loader2,
+  Building2, BarChart3, Video, Globe,
+  Calendar, ExternalLink, ImageIcon, Clock,
+  ChevronRight
 } from "lucide-react"
 import { BusinessProfileForm } from "./business-profile-form"
-import { getBusinessProfiles } from "@/app/api/businessProfile"
+import { getBusinessProfiles, getPublishedPosts, getUserAds } from "@/app/api/businessProfile"
 import Link from "next/link"
 import { toast } from "react-toastify"
 
@@ -26,7 +27,16 @@ interface BusinessProfile {
   targetAudience: string
   adGoal: string
   createdAt: string
-  ads?: any[]
+  _count?: { ads: number }
+}
+
+interface AdHistoryItem {
+  id: number
+  imageUrl: string | null
+  isVideo: boolean
+  generatedAt: string
+  businessProfile: { id: number; businessName: string }
+  _count?: { publishedPosts: number }
 }
 
 export function UserDashboard() {
@@ -36,6 +46,14 @@ export function UserDashboard() {
   const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("profiles")
+  const [publishedCount, setPublishedCount] = useState(0)
+  const [adHistory, setAdHistory] = useState<AdHistoryItem[]>([])
+  const [adsLoading, setAdsLoading] = useState(false)
+  const [adPage, setAdPage] = useState(1)
+  const [adTotalPages, setAdTotalPages] = useState(1)
+  const [adsLoaded, setAdsLoaded] = useState(false)
+
+  const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
   const loadProfiles = async () => {
     setIsLoading(true)
@@ -50,9 +68,45 @@ export function UserDashboard() {
     }
   }
 
+  const loadPublishedCount = async () => {
+    try {
+      const data = await getPublishedPosts()
+      if (data?.success) {
+        setPublishedCount(data.posts?.length || 0)
+      }
+    } catch {
+      setPublishedCount(0)
+    }
+  }
+
+  const loadAds = async (page: number = 1, append: boolean = false) => {
+    setAdsLoading(true)
+    try {
+      const data = await getUserAds(page, 18)
+      if (data?.success) {
+        setAdHistory(prev => append ? [...prev, ...(data.ads || [])] : (data.ads || []))
+        setAdPage(data.pagination?.page || 1)
+        setAdTotalPages(data.pagination?.totalPages || 1)
+      }
+      setAdsLoaded(true)
+    } catch (err) {
+      console.error("Failed to load ads:", err)
+    } finally {
+      setAdsLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadProfiles()
+    loadPublishedCount()
   }, [])
+
+  // Load ads when the user switches to the Ad History tab
+  useEffect(() => {
+    if (activeTab === "ads" && !adsLoaded) {
+      loadAds(1)
+    }
+  }, [activeTab])
 
   // After profile is created via BusinessProfileForm, redirect to generate-ads
   const handleProfileSubmit = async (profile: any) => {
@@ -73,8 +127,8 @@ export function UserDashboard() {
     p.niche?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Aggregate stats from real data
-  const totalAds = businessProfiles.reduce((sum, p) => sum + (p.ads?.length ?? 0), 0)
+  // Aggregate stats from real data — use _count.ads for accurate total
+  const totalAds = businessProfiles.reduce((sum, p) => sum + (p._count?.ads ?? 0), 0)
 
   // Show the full-screen BusinessProfileForm (same as landing page Get Started flow)
   if (showCreateProfile) {
@@ -123,10 +177,10 @@ export function UserDashboard() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Business Profiles</CardTitle>
+            <CardTitle className="text-sm font-medium">Profiles</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -140,160 +194,301 @@ export function UserDashboard() {
             <Sparkles className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalAds}</div>
+            <div className="text-2xl font-bold text-indigo-600">{totalAds}</div>
             <p className="text-xs text-muted-foreground">Generated so far</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Social Posts</CardTitle>
+            <CardTitle className="text-sm font-medium">Published</CardTitle>
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              <Link href="/social" className="hover:text-indigo-600 transition-colors">View →</Link>
-            </div>
-            <p className="text-xs text-muted-foreground">Published & scheduled</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Analytics</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              <Link href="/analytics" className="hover:text-indigo-600 transition-colors">View →</Link>
-            </div>
-            <p className="text-xs text-muted-foreground">Impressions & CTR</p>
+            <div className="text-2xl font-bold text-green-600">{publishedCount}</div>
+            <p className="text-xs text-muted-foreground">Social posts</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Business Profiles */}
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Your Business Profiles</h2>
-            <p className="text-sm text-gray-500">Select a profile to generate ads for it</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search profiles..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-48"
-              />
-            </div>
-            <Button
-              onClick={() => setShowCreateProfile(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Profile
-            </Button>
-          </div>
-        </div>
+      {/* Tabs: Profiles & Ad History */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="profiles" className="gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />Profiles ({businessProfiles.length})
+          </TabsTrigger>
+          <TabsTrigger value="ads" className="gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />Ad History
+          </TabsTrigger>
+        </TabsList>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-            <span className="ml-3 text-gray-500">Loading your profiles...</span>
-          </div>
-        ) : filteredProfiles.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="py-16 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto">
-                <Building2 className="w-8 h-8 text-indigo-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-700">No business profiles yet</h3>
-                <p className="text-gray-500 text-sm mt-1">
-                  Create your first profile to start generating AI-powered ads
-                </p>
+        {/* ── Profiles Tab ────────────────────────────────── */}
+        <TabsContent value="profiles" className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Your Business Profiles</h2>
+              <p className="text-sm text-gray-500">Select a profile to generate ads for it</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search profiles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-48"
+                />
               </div>
               <Button
                 onClick={() => setShowCreateProfile(true)}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Create Your First Profile
+                New Profile
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredProfiles.map((profile) => (
-              <Card key={profile.id} className="group hover:shadow-lg transition-all hover:border-indigo-300">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-base font-bold group-hover:text-indigo-700 transition-colors">
-                        {profile.businessName}
-                      </CardTitle>
-                      <Badge variant="secondary" className="mt-1 text-xs capitalize">{profile.niche}</Badge>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="w-5 h-5 text-indigo-600" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3 pt-0">
-                  <div>
-                    <Label className="text-xs text-gray-500 uppercase tracking-wide">Product/Service</Label>
-                    <p className="text-sm mt-0.5 line-clamp-2">{profile.productService}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Audience</Label>
-                      <p className="text-xs mt-0.5 line-clamp-1">{profile.targetAudience}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Goal</Label>
-                      <p className="text-xs mt-0.5 line-clamp-1 capitalize">{profile.adGoal.replace(/-/g, " ")}</p>
-                    </div>
-                  </div>
-                  <div className="pt-2 flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
-                      onClick={() => router.push(`/generate-ads?profileId=${profile.id}`)}
-                    >
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Generate Ads
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 text-xs"
-                      onClick={() => router.push(`/generate-ads?profileId=${profile.id}`)}
-                    >
-                      <Video className="w-3 h-3 mr-1" />
-                      Video Ads
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Add New Profile Card */}
-            <button
-              onClick={() => setShowCreateProfile(true)}
-              className="min-h-[200px] rounded-xl border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all flex flex-col items-center justify-center gap-3 group"
-            >
-              <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
-                <Plus className="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transition-colors" />
-              </div>
-              <div className="text-center">
-                <p className="font-medium text-gray-500 group-hover:text-indigo-700 transition-colors text-sm">Add New Profile</p>
-                <p className="text-xs text-gray-400 mt-0.5">Create a new business profile</p>
-              </div>
-            </button>
+            </div>
           </div>
-        )}
-      </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+              <span className="ml-3 text-gray-500">Loading your profiles...</span>
+            </div>
+          ) : filteredProfiles.length === 0 ? (
+            <Card className="border-dashed border-2">
+              <CardContent className="py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto">
+                  <Building2 className="w-8 h-8 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">No business profiles yet</h3>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Create your first profile to start generating AI-powered ads
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowCreateProfile(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Profile
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredProfiles.map((profile) => (
+                <Card key={profile.id} className="group hover:shadow-lg transition-all hover:border-indigo-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-base font-bold group-hover:text-indigo-700 transition-colors">
+                          {profile.businessName}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs capitalize">{profile.niche}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {profile._count?.ads || profile.ads?.length || 0} ads
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-5 h-5 text-indigo-600" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3 pt-0">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Product/Service</Label>
+                      <p className="text-sm mt-0.5 line-clamp-2">{profile.productService}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Audience</Label>
+                        <p className="text-xs mt-0.5 line-clamp-1">{profile.targetAudience}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Goal</Label>
+                        <p className="text-xs mt-0.5 line-clamp-1 capitalize">{profile.adGoal.replace(/-/g, " ")}</p>
+                      </div>
+                    </div>
+                    <div className="pt-2 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                        onClick={() => router.push(`/generate-ads?profileId=${profile.id}`)}
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Generate Ads
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-xs"
+                        onClick={() => router.push(`/generate-ads?profileId=${profile.id}`)}
+                      >
+                        <Video className="w-3 h-3 mr-1" />
+                        Video Ads
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Add New Profile Card */}
+              <button
+                onClick={() => setShowCreateProfile(true)}
+                className="min-h-[200px] rounded-xl border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all flex flex-col items-center justify-center gap-3 group"
+              >
+                <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                  <Plus className="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-500 group-hover:text-indigo-700 transition-colors text-sm">Add New Profile</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Create a new business profile</p>
+                </div>
+              </button>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ── Ad History Tab ─────────────────────────────── */}
+        <TabsContent value="ads" className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Generated Ad History</h2>
+              <p className="text-sm text-gray-500">All your AI-generated ads across profiles</p>
+            </div>
+            <Link href="/generate-ads">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" size="sm">
+                <Sparkles className="w-4 h-4 mr-2" />Generate New Ads
+              </Button>
+            </Link>
+          </div>
+
+          {adsLoading && adHistory.length === 0 ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+              <span className="ml-3 text-gray-500">Loading your ads...</span>
+            </div>
+          ) : adHistory.length === 0 ? (
+            <Card className="border-dashed border-2">
+              <CardContent className="py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto">
+                  <Sparkles className="w-8 h-8 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">No ads generated yet</h3>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Create a business profile and generate your first AI-powered ad
+                  </p>
+                </div>
+                <Link href="/generate-ads">
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Sparkles className="w-4 h-4 mr-2" />Generate Ads
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {adHistory.map((ad) => {
+                  const publishCount = ad._count?.publishedPosts ?? 0
+                  const adLabel = ad.isVideo ? "Video Ad" : "Image Ad"
+                  return (
+                    <Card key={ad.id} className="overflow-hidden hover:shadow-lg transition-all group">
+                      {/* Ad Image Thumbnail */}
+                      {ad.imageUrl ? (
+                        <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 overflow-hidden relative">
+                          <img
+                            src={ad.imageUrl.startsWith("http") ? ad.imageUrl : `${BACKEND_URL}${ad.imageUrl}`}
+                            alt={adLabel}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                          />
+                          <div className="absolute top-2 left-2 flex gap-1.5">
+                            <Badge className={`text-[10px] ${ad.isVideo ? "bg-pink-600" : "bg-purple-600"} text-white border-0`}>
+                              {ad.isVideo ? <><Video className="w-2.5 h-2.5 mr-0.5" />Video</> : <><ImageIcon className="w-2.5 h-2.5 mr-0.5" />Image</>}
+                            </Badge>
+                            {publishCount > 0 && (
+                              <Badge className="text-[10px] bg-green-600 text-white border-0">
+                                <Globe className="w-2.5 h-2.5 mr-0.5" />{publishCount} published
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-28 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center relative">
+                          {ad.isVideo
+                            ? <Video className="w-10 h-10 text-pink-400" />
+                            : <ImageIcon className="w-10 h-10 text-indigo-400" />
+                          }
+                          <div className="absolute top-2 left-2 flex gap-1.5">
+                            <Badge className={`text-[10px] ${ad.isVideo ? "bg-pink-600" : "bg-purple-600"} text-white border-0`}>
+                              {ad.isVideo ? "Video" : "Image"}
+                            </Badge>
+                            {publishCount > 0 && (
+                              <Badge className="text-[10px] bg-green-600 text-white border-0">
+                                <Globe className="w-2.5 h-2.5 mr-0.5" />{publishCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <CardContent className="p-4 space-y-2">
+                        <h3 className="font-semibold text-sm">
+                          {adLabel} #{ad.id}
+                        </h3>
+
+                        {/* Meta row */}
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {ad.businessProfile?.businessName}
+                            </Badge>
+                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {new Date(ad.generatedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => router.push(`/generate-ads?profileId=${ad.businessProfile?.id}`)}
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />View
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {/* Load More pagination */}
+              {adPage < adTotalPages && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => loadAds(adPage + 1, true)}
+                    disabled={adsLoading}
+                    className="gap-2"
+                  >
+                    {adsLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                    Load More
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Navigation Cards */}
       <div className="grid md:grid-cols-3 gap-4 pt-2">
