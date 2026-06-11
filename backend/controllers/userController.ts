@@ -60,12 +60,19 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
         // Generate JWT token
         const token = jwt.sign( { id: newUser.id }, process.env.JWT_SECRET as string, { expiresIn: '24h' } );
 
+        console.log("🔐 [Register] Generated JWT token for user:", newUser.email);
+        console.log("📍 [Register] Frontend URL:", process.env.FRONTEND_URL);
+        console.log("🍪 [Register] Setting cookie with sameSite: 'none', secure: true");
+
         res.cookie( 'token', token, {
             httpOnly: true,
             secure: true,
             sameSite: "none",
             maxAge: 86400000, // 24 hours
         } );
+
+        console.log("✅ [Register] Cookie set successfully");
+
         res.status( 201 ).json( {
             message: "User registered successfully",
             success: true,
@@ -78,7 +85,7 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
             }
         } );
     } catch ( error ) {
-        console.error( "Error in registerUser:", error );
+        console.error( "❌ [Register] Error:", error );
         res.status( 500 ).json( {
             message: "Internal server error",
             success: false,
@@ -117,13 +124,19 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
         // Generate JWT token
         const token = jwt.sign( { id: user.id }, process.env.JWT_SECRET as string, { expiresIn: '24h' } );
 
+        console.log("🔐 [Login] Generated JWT token for user:", user.email);
+        console.log("📍 [Login] Frontend URL:", process.env.FRONTEND_URL);
+        console.log("🍪 [Login] Setting cookie with sameSite: 'none', secure: true");
+
         res.cookie( 'token', token, {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-
             maxAge: 86400000, // 24 hours
         } );
+
+        console.log("✅ [Login] Cookie set successfully");
+
         res.status( 200 ).json( {
             message: "User logged in successfully",
             success: true,
@@ -135,7 +148,7 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
             },
         } );
     } catch ( error ) {
-        console.error( "Error in loginUser:", error );
+        console.error( "❌ [Login] Error:", error );
         res.status( 500 ).json( {
             message: "Internal server error",
             success: false,
@@ -227,6 +240,8 @@ export const updateUserProfile = async ( req: Request, res: Response ): Promise<
 
 export const logoutUser = async ( req: Request, res: Response ): Promise<void> => {
     try {
+        console.log("👋 [Logout] Clearing token cookie");
+
         res.cookie( "token", "", {
             httpOnly: true,
             secure: true,
@@ -234,12 +249,14 @@ export const logoutUser = async ( req: Request, res: Response ): Promise<void> =
             expires: new Date( 0 ), // Expire immediately
         } );
 
+        console.log("✅ [Logout] Cookie cleared successfully");
+
         res.status( 200 ).json( {
             message: "User logged out successfully",
             success: true,
         } );
     } catch ( error ) {
-        console.error( "Error in logoutUser:", error );
+        console.error( "❌ [Logout] Error:", error );
         res.status( 500 ).json( {
             message: "Internal server error",
             success: false,
