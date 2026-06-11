@@ -11,8 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Upload, Sparkles, Download, Copy, RefreshCw, ImageIcon,
-  Share2, ArrowLeft, Loader2, Video, Play, Check, Globe,
-  Facebook, Instagram, Linkedin, Twitter, X, Calendar,
+  Share2, ArrowLeft, Loader2, Video, Play, Check, Globe, Globe2, Home, House,
+  Facebook, Instagram, Linkedin, Twitter, X, Calendar, ChartBar,
   Heart, MessageCircle, Bookmark, Send as SendIcon
 } from "lucide-react";
 import {
@@ -35,7 +35,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AdLoadingScreen } from "@/components/ad-loading-screen";
 
 interface BusinessProfile {
   id: number;
@@ -341,28 +340,28 @@ function GenerateAdsPage() {
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent">
-                  🏠 Dashboard
+                  <Home /> Dashboard
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href="/generate-ads" className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-medium">
-                  ✨ Generate Ads
+                  <Sparkles /> Generate Ads
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href="/social" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent">
-                  🌐 Social Media
+                  <Globe2 /> Social Media
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href="/analytics" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent">
-                  📊 Analytics
+                  <ChartBar /> Analytics
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -492,7 +491,9 @@ function GenerateAdsPage() {
                       disabled={isGenerating}
                       className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                     >
-                      {isGenerating ? "Generating..." : (
+                      {isGenerating ? (
+                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating ads (this may take 1-2 min)...</>
+                      ) : (
                         <><Sparkles className="w-5 h-5 mr-2" />Generate 3 Image Ad Creatives</>
                       )}
                     </Button>
@@ -671,7 +672,9 @@ function GenerateAdsPage() {
                       disabled={isGeneratingVideo || !selectedAvatar}
                       className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                     >
-                      {isGeneratingVideo ? "Generating..." : (
+                      {isGeneratingVideo ? (
+                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating video (2-3 min)...</>
+                      ) : (
                         <><Video className="w-5 h-5 mr-2" />Generate Video Ad</>
                       )}
                     </Button>
@@ -735,10 +738,6 @@ function GenerateAdsPage() {
             </Tabs>
           </div>
         </div>
-
-        {/* Global Loading Screens */}
-        <AdLoadingScreen isVisible={isGenerating} type="image" />
-        <AdLoadingScreen isVisible={isGeneratingVideo} type="video" />
       </SidebarInset>
 
       {/* Publish Modal with Phone Mockup Preview */}
@@ -762,7 +761,7 @@ function GenerateAdsPage() {
                   <div className="flex items-center justify-between px-4 md:px-5 py-1 md:py-2 text-[9px] md:text-[10px] font-semibold text-gray-800 dark:text-gray-200">
                     <span>9:41</span>
                     <div className="flex items-center gap-1">
-                      <div className="w-3 md:w-3.5 h-1.5 md:h-2 border border-gray-600 rounded-sm relative"><div className="absolute inset-0.5 bg-green-500 rounded-sm" style={{width:'60%'}} /></div>
+                      <div className="w-3 md:w-3.5 h-1.5 md:h-2 border border-gray-600 rounded-sm relative"><div className="absolute inset-0.5 bg-green-500 rounded-sm" style={{ width: '60%' }} /></div>
                     </div>
                   </div>
 
@@ -774,8 +773,8 @@ function GenerateAdsPage() {
                     const platformLabel = pConfig?.label || "Instagram";
                     const platformColor = activePlatform === "instagram" ? "from-purple-600 via-pink-500 to-orange-400"
                       : activePlatform === "facebook" ? "from-blue-600 to-blue-600"
-                      : activePlatform === "twitter" ? "from-gray-900 to-gray-900"
-                      : "from-blue-700 to-blue-700";
+                        : activePlatform === "twitter" ? "from-gray-900 to-gray-900"
+                          : "from-blue-700 to-blue-700";
 
                     return (
                       <>
@@ -843,7 +842,7 @@ function GenerateAdsPage() {
 
                   {/* Bottom Nav Bar */}
                   <div className="border-t border-gray-200 dark:border-gray-700 py-1.5 md:py-2 px-5 md:px-6 flex justify-around">
-                    {[1,2,3,4].map(i => (
+                    {[1, 2, 3, 4].map(i => (
                       <div key={i} className="w-4 md:w-5 h-4 md:h-5 rounded-sm bg-gray-300 dark:bg-gray-600" />
                     ))}
                   </div>

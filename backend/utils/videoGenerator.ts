@@ -1,10 +1,9 @@
-import { GoogleGenAI } from '@google/genai';
+import { InferenceClient } from "@huggingface/inference";
 import path from 'path';
+import fs from 'fs/promises';
 import { AdData } from "./adCreativeGenerator";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env['GEMINI_API_KEY'],
-});
+const client = new InferenceClient(process.env.HF_TOKEN);
 
 export interface VideoGenerationOptions {
   avatarId: string;
@@ -64,8 +63,8 @@ export const generateAvatarVideoAd = async (
   adCopy: string
 ): Promise<VideoResult> => {
   try {
-    if (!process.env['GEMINI_API_KEY']) {
-      throw new Error("GEMINI_API_KEY not configured");
+    if (!process.env.HF_TOKEN) {
+      throw new Error("HF_TOKEN not configured");
     }
 
     const scriptText = `
@@ -76,38 +75,32 @@ export const generateAvatarVideoAd = async (
     const avatarDescription = AVATAR_OPTIONS.find(a => a.id === avatarId)?.description || "professional presenter";
     const prompt = `A cinematic, ultra-realistic commercial video featuring a ${avatarDescription}. The person is speaking directly to the camera confidently. They are delivering an advertisement for ${adData.businessname}, which is in the ${adData.niche} niche offering ${adData.productService}. The ad's script tone resembles: "${scriptText}". Ensure well-lit, modern background suitable for a corporate ad.`;
 
-    console.log(`🎬 Requesting generation from Veo-3.1 with prompt: ${prompt}`);
+    console.log(`🎬 Requesting generation from Wan-AI with prompt: ${prompt}`);
 
-    let operation = await ai.models.generateVideos({
-        model: "veo-3.1-generate-preview",
-        prompt: prompt,
+    const videoBlob = await client.textToVideo({
+        provider: "fal-ai",
+        model: "Wan-AI/Wan2.1-T2V-14B",
+        inputs: prompt,
     });
 
-    // Poll the operation status until the video is ready safely to prevent 429 (Rate Limits)
-    while (!operation.done) {
-        console.log("Waiting for video generation to complete (polling every 30 seconds)...");
-        await new Promise((resolve) => setTimeout(resolve, 30000));
-        operation = await ai.operations.getVideosOperation({
-            operation: operation as any,
-        });
-    }
-
-    if (!operation.response?.generatedVideos?.[0]?.video) {
-        throw new Error("Veo failed to return a video in the operation response");
+    if (!videoBlob) {
+        throw new Error("Wan-AI failed to return a video");
     }
 
     const baseFileName = `ad_${Date.now()}`;
     const mp4RelativeFilePath = `generated/${baseFileName}.mp4`;
     const mp4FileName = path.join(process.cwd(), mp4RelativeFilePath);
 
-    console.log(`🎬 Downloading generated video to ${mp4FileName}...`);
-    // Download the generated video.
-    await ai.files.download({
-        file: operation.response.generatedVideos[0].video,
-        downloadPath: mp4FileName,
-    });
+    console.log(`🎬 Saving generated video to ${mp4FileName}...`);
+    
+    // Use the generated video (it's a Blob)
+    const arrayBuffer = await videoBlob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Save to the generated folder
+    await fs.writeFile(mp4FileName, buffer);
 
-    console.log(`✅ Successfully downloaded Veo video.`);
+    console.log(`✅ Successfully downloaded Wan-AI video.`);
 
     const avatarImageMap: Record<string, string> = {
       amber: "https://plus.unsplash.com/premium_photo-1690407617542-2f210cf20d7e?w=600&auto=format&fit=crop&q=60",
