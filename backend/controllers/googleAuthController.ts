@@ -50,13 +50,19 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         // Generate JWT token
         const jwtToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "24h" });
 
+        console.log("🔐 [Google Auth] Generated JWT token for user:", user.email);
+        console.log("📍 [Google Auth] Frontend URL:", process.env.FRONTEND_URL);
+        console.log("🍪 [Google Auth] Setting cookie with sameSite: 'none', secure: true");
+
         // Set cookie
         res.cookie("token", jwtToken, {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            maxAge: 86400000, // 24 hours - ✅ Changed from 1h to 24h for consistency
+            maxAge: 86400000, // 24 hours
         });
+
+        console.log("✅ [Google Auth] Cookie set successfully");
 
         res.status(200).json({
             message: "Google authentication successful",
@@ -70,7 +76,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
             },
         });
     } catch (error) {
-        console.error("Error in googleAuth:", error);
+        console.error("❌ [Google Auth] Error:", error);
         res.status(500).json({
             message: "Internal server error",
             success: false,
