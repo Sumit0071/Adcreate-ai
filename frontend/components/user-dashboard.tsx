@@ -287,7 +287,7 @@ export function UserDashboard() {
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="secondary" className="text-xs capitalize">{profile.niche}</Badge>
                           <Badge variant="outline" className="text-xs">
-                            {profile._count?.ads || profile.ads?.length || 0} ads
+                            {profile._count?.ads  || 0} ads
                           </Badge>
                         </div>
                       </div>
