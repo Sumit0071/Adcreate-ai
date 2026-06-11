@@ -23,7 +23,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const userData = await getUserProfile();
       set({
-        user: userData,
+        user: userData.user,
         isLoggedIn: true,
         loading: false,
         hasFetched: true,
@@ -39,12 +39,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    try {
-      await logOut();
-    } catch (err) {
-      console.error("Logout failed", err);
-    }
-    // ✅ clear user and reset hasFetched so profile can be refetched next login
-    set({ user: null, isLoggedIn: false, hasFetched: false });
-  },
+  try {
+    await logOut();
+  } catch (err) {
+    console.error("Logout failed", err);
+  }
+  set({ 
+    user: null, 
+    isLoggedIn: false, 
+    hasFetched: true  // ← change false to true
+  });
+},
 }));
