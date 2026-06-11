@@ -48,14 +48,14 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         }
 
         // Generate JWT token
-        const jwtToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
+        const jwtToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "24h" });
 
         // Set cookie
         res.cookie("token", jwtToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 3600000, // 1 hour
+            secure: true,
+            sameSite: "none",
+            maxAge: 86400000, // 24 hours - ✅ Changed from 1h to 24h for consistency
         });
 
         res.status(200).json({
@@ -77,4 +77,3 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         });
     }
 };
-
