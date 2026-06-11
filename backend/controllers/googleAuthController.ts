@@ -53,8 +53,8 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         // Set cookie
         res.cookie("token", jwtToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            secure: true,
+            sameSite: "none",
             maxAge: 3600000, // 1 hour
         });
 
