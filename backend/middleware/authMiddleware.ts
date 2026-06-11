@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+
 const authMiddleware = async ( req: Request, res: Response, next: NextFunction ) => {
     try {
         const token = req.cookies.token;  
@@ -12,7 +13,7 @@ const authMiddleware = async ( req: Request, res: Response, next: NextFunction )
         const decode = jwt.verify( token, process.env.JWT_SECRET as string ) as { id: string };
         if ( !decode ) {
             return res.status( 401 ).json( {
-                message: 'Unauthorized:token is not valid',
+                message: 'Unauthorized: token is not valid',
                 success: false
             } );
         }
@@ -20,13 +21,18 @@ const authMiddleware = async ( req: Request, res: Response, next: NextFunction )
         next();
     }
     catch ( error ) {
-        console.log( "first error in auth middleware", error );
+        console.log( "Auth middleware error:", error );
         if ( error instanceof jwt.JsonWebTokenError ) {
             return res.status( 401 ).json( {
                 message: "Unauthorized: Invalid or expired token",
                 success: false,
             } );
         }
+        // ✅ Added proper error handling for non-JWT errors
+        return res.status( 401 ).json( {
+            message: "Unauthorized: Authentication failed",
+            success: false,
+        } );
     }
 }
 
