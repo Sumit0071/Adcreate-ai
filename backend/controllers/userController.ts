@@ -62,8 +62,8 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
 
         res.cookie( 'token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-              sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: true,
+            sameSite: "none",
             maxAge: 86400000, // 24 hours
         } );
         res.status( 201 ).json( {
@@ -119,8 +119,8 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
 
         res.cookie( 'token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-             sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            secure: true,
+            sameSite: "none",
 
             maxAge: 86400000, // 24 hours
         } );
@@ -225,24 +225,24 @@ export const updateUserProfile = async ( req: Request, res: Response ): Promise<
     }
 };
 
-export const logoutUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    res.cookie("token", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      expires: new Date(0), // Expire immediately
-    });
+export const logoutUser = async ( req: Request, res: Response ): Promise<void> => {
+    try {
+        res.cookie( "token", "", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            expires: new Date( 0 ), // Expire immediately
+        } );
 
-    res.status(200).json({
-      message: "User logged out successfully",
-      success: true,
-    });
-  } catch (error) {
-    console.error("Error in logoutUser:", error);
-    res.status(500).json({
-      message: "Internal server error",
-      success: false,
-    });
-  }
+        res.status( 200 ).json( {
+            message: "User logged out successfully",
+            success: true,
+        } );
+    } catch ( error ) {
+        console.error( "Error in logoutUser:", error );
+        res.status( 500 ).json( {
+            message: "Internal server error",
+            success: false,
+        } );
+    }
 };
