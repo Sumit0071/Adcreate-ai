@@ -16,24 +16,29 @@ const CORS_OPTIONS = {
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
     credentials: true,
-    optionsSuccessStatus: 204,// For legacy browser support
-    allowHeaders: [
+    optionsSuccessStatus: 204,
+    allowedHeaders: [
         "Content-Type",
         "Authorization"
-    ]
+    ],
+    exposedHeaders: ["Set-Cookie"], // ✅ CRITICAL: Allow Set-Cookie header to be exposed
 };
+
 const routes: Router = express.Router();
 app.use(cors(CORS_OPTIONS));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 checkConnection();
+
 app.get("/", (req: Request, res: Response, next) => {
     res.status(200).send("Welcome to Adcreate.ai Backend!");
 })
+
 app.get("/api/health", (req: Request, res: Response) => {
     res.status(200).send("App is running fine");
 });
+
 app.use("/api/v1", userRouter);
 app.use("/api/v1/auth", googleAuthRouter);
 app.use("/api/v1/business", businessProfileRouter);
