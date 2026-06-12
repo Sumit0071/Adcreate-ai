@@ -21,7 +21,7 @@ import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge"
 import {
   Sparkles, Target, Zap, Users, ArrowRight, Settings, Shield, BarChart3, MessageSquare, Moon,
-  Sun, CheckCircle,
+  Sun, CheckCircle, Github,
 } from "lucide-react"
 import { BusinessProfileForm } from "@/components/business-profile-form"
 import { WhatsAppChatImport } from "@/components/whatsapp-chat-import"
@@ -286,6 +286,20 @@ export default function Home() {
                 />
               </div>
               <div className="flex items-center gap-x-4">
+                <a
+                  href="https://github.com/Sumit0071/Adcreate-ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center"
+                  title="View on GitHub"
+                >
+                  <NavbarButton
+                    variant="dark"
+                    className="rounded-full"
+                  >
+                    <Github className="w-5 h-5" />
+                  </NavbarButton>
+                </a>
                 <NavbarButton
                   variant="dark"
                   onClick={toggleTheme}
@@ -326,6 +340,15 @@ export default function Home() {
                   {item.name}
                 </a>
               ))}
+              <a
+                href="https://github.com/Sumit0071/Adcreate-ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
+                onClick={() => setIsOpen(false)}
+              >
+                GitHub
+              </a>
               {!user ? (
                 <NavbarButton
                   className="mt-4 w-full"
@@ -486,11 +509,11 @@ export default function Home() {
                     <div>
                       <h3 className="text-gray-900 dark:text-white font-semibold mb-4">What would you like to do now?</h3>
                       <div className="grid grid-cols-2 gap-4">
-                        <button className="p-4 border border-gray-200 dark:border-slate-600 rounded-lg hover:border-purple-300 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-700 transition-colors text-left">
+                        <button className="p-4 border border-gray-200 dark:border-slate-600 rounded-lg hover:border-purple-300 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-700 transition">
                           <Zap className="w-6 h-6 text-purple-600 mb-2" />
                           <p className="font-medium text-gray-900 dark:text-white">Update Product Content</p>
                         </button>
-                        <button className="p-4 border border-gray-200 dark:border-slate-600 rounded-lg hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors text-left">
+                        <button className="p-4 border border-gray-200 dark:border-slate-600 rounded-lg hover:border-blue-300 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-700 transition">
                           <Target className="w-6 h-6 text-blue-600 mb-2" />
                           <p className="font-medium text-gray-900 dark:text-white">Check my technical SEO</p>
                         </button>
@@ -712,5 +735,4 @@ export default function Home() {
     </div>
   );
 }
-
 
