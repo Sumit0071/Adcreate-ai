@@ -1,9 +1,7 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-
-const prisma = new PrismaClient();
 
 // Create an OAuth2 client with your Google client ID
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -50,15 +48,21 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
         }
 
         // Generate JWT token
-        const jwtToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
+        const jwtToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "24h" });
+
+        console.log("🔐 [Google Auth] Generated JWT token for user:", user.email);
+        console.log("📍 [Google Auth] Frontend URL:", process.env.FRONTEND_URL);
+        console.log("🍪 [Google Auth] Setting cookie with sameSite: 'none', secure: true");
 
         // Set cookie
         res.cookie("token", jwtToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 3600000, // 1 hour
+            secure: true,
+            sameSite: "none",
+            maxAge: 86400000, // 24 hours
         });
+
+        console.log("✅ [Google Auth] Cookie set successfully");
 
         res.status(200).json({
             message: "Google authentication successful",
@@ -72,7 +76,7 @@ export const googleAuth = async (req: Request, res: Response): Promise<void> => 
             },
         });
     } catch (error) {
-        console.error("Error in googleAuth:", error);
+        console.error("❌ [Google Auth] Error:", error);
         res.status(500).json({
             message: "Internal server error",
             success: false,

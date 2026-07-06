@@ -1,31 +1,33 @@
 import { Request, Response } from "express";
 import bcryptjs from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../config/prisma";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/dataUrl";
 import cloudinary from "../config/cloudinary";
 
 
 // Initialize Prisma Client
-const prisma = new PrismaClient();
-
 // register user function
+const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+
 export const registerUser = async ( req: Request, res: Response ): Promise<void> => {
     try {
         const { username, password, email, role, Avatar } = req.body;
         const file = req.file;
 
-        const fileUri = getDataUri( file );
-
-        if ( !fileUri || !fileUri.content ) {
-            res.status( 400 ).json( {
-                message: "Invalid or missing file for avatar upload",
-                success: false,
-            } );
-            return;
+        // Avatar upload is optional — use default gravatar if not provided
+        let avatarUrl = Avatar || DEFAULT_AVATAR;
+        if ( file ) {
+            try {
+                const fileUri = getDataUri( file );
+                if ( fileUri?.content ) {
+                    const cloudResponse = await cloudinary.uploader.upload( fileUri.content as string );
+                    avatarUrl = cloudResponse.secure_url;
+                }
+            } catch ( uploadError ) {
+                console.warn( "Avatar upload failed, using default:", uploadError );
+            }
         }
-
-        const cloudResponse = await cloudinary.uploader.upload( fileUri.content as string );
 
         // Check if user already exists
         const existingUser = await prisma.user.findUnique( {
@@ -50,20 +52,27 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
                 username,
                 email,
                 password: hashedPassword,
-                role: role && role === "ADMIN" ? "ADMIN" : "USER",// Default role is 'user'
-                Avatar: Avatar ? Avatar : cloudResponse.secure_url, // Optional field
+                role: role && role === "ADMIN" ? "ADMIN" : "USER",
+                Avatar: avatarUrl,
             },
         } );
 
         // Generate JWT token
-        const token = jwt.sign( { id: newUser.id }, process.env.JWT_SECRET as string, { expiresIn: '1h' } );
+        const token = jwt.sign( { id: newUser.id }, process.env.JWT_SECRET as string, { expiresIn: '24h' } );
+
+        console.log("🔐 [Register] Generated JWT token for user:", newUser.email);
+        console.log("📍 [Register] Frontend URL:", process.env.FRONTEND_URL);
+        console.log("🍪 [Register] Setting cookie with sameSite: 'none', secure: true");
 
         res.cookie( 'token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Set to true in production
-            maxAge: 3600000, // 1 hour
-            sameSite: 'strict', // Helps prevent CSRF attacks           
-        } )
+            secure: true,
+            sameSite: "none",
+            maxAge: 86400000, // 24 hours
+        } );
+
+        console.log("✅ [Register] Cookie set successfully");
+
         res.status( 201 ).json( {
             message: "User registered successfully",
             success: true,
@@ -76,7 +85,7 @@ export const registerUser = async ( req: Request, res: Response ): Promise<void>
             }
         } );
     } catch ( error ) {
-        console.error( "Error in registerUser:", error );
+        console.error( "❌ [Register] Error:", error );
         res.status( 500 ).json( {
             message: "Internal server error",
             success: false,
@@ -113,15 +122,21 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
         }
 
         // Generate JWT token
-        const token = jwt.sign( { id: user.id }, process.env.JWT_SECRET as string, { expiresIn: '1h' } );
+        const token = jwt.sign( { id: user.id }, process.env.JWT_SECRET as string, { expiresIn: '24h' } );
 
-        // Set the token as a secure, HttpOnly cookie
+        console.log("🔐 [Login] Generated JWT token for user:", user.email);
+        console.log("📍 [Login] Frontend URL:", process.env.FRONTEND_URL);
+        console.log("🍪 [Login] Setting cookie with sameSite: 'none', secure: true");
+
         res.cookie( 'token', token, {
-            httpOnly: true, // Prevents client-side JS from accessing the cookie
-            secure: process.env.NODE_ENV === 'production', // Ensures cookie is only sent over HTTPS
-            sameSite: 'strict', // Helps protect against CSRF attacks
-            maxAge: 3600000, // 1 hour expiration in milliseconds
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 86400000, // 24 hours
         } );
+
+        console.log("✅ [Login] Cookie set successfully");
+
         res.status( 200 ).json( {
             message: "User logged in successfully",
             success: true,
@@ -133,7 +148,7 @@ export const loginUser = async ( req: Request, res: Response ): Promise<void> =>
             },
         } );
     } catch ( error ) {
-        console.error( "Error in loginUser:", error );
+        console.error( "❌ [Login] Error:", error );
         res.status( 500 ).json( {
             message: "Internal server error",
             success: false,
@@ -223,24 +238,28 @@ export const updateUserProfile = async ( req: Request, res: Response ): Promise<
     }
 };
 
-export const logoutUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    res.cookie("token", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      expires: new Date(0), // Expire immediately
-    });
+export const logoutUser = async ( req: Request, res: Response ): Promise<void> => {
+    try {
+        console.log("👋 [Logout] Clearing token cookie");
 
-    res.status(200).json({
-      message: "User logged out successfully",
-      success: true,
-    });
-  } catch (error) {
-    console.error("Error in logoutUser:", error);
-    res.status(500).json({
-      message: "Internal server error",
-      success: false,
-    });
-  }
+        res.cookie( "token", "", {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            expires: new Date( 0 ), // Expire immediately
+        } );
+
+        console.log("✅ [Logout] Cookie cleared successfully");
+
+        res.status( 200 ).json( {
+            message: "User logged out successfully",
+            success: true,
+        } );
+    } catch ( error ) {
+        console.error( "❌ [Logout] Error:", error );
+        res.status( 500 ).json( {
+            message: "Internal server error",
+            success: false,
+        } );
+    }
 };

@@ -1,489 +1,537 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
-  Plus,
-  Search,
-  Eye,
-  Edit,
-  Trash2,
-  Download,
-  Share2,
-  TrendingUp,
-  Target,
-  Sparkles,
-  DollarSign,
+  Plus, Search, Sparkles, Loader2,
+  Building2, BarChart3, Video, Globe,
+  Calendar, ExternalLink, ImageIcon, Clock,
+  ChevronRight
 } from "lucide-react"
-import { SalesProfileTracking } from "./sales-profile-tracking"
-
-interface GeneratedAd {
-  id: string
-  title: string
-  headline: string
-  description: string
-  imageUrl: string
-  businessProfile: string
-  createdAt: string
-  status: "active" | "paused" | "draft"
-  performance: {
-    impressions: number
-    clicks: number
-    ctr: number
-    conversions: number
-  }
-  platforms: string[]
-}
+import { BusinessProfileForm } from "./business-profile-form"
+import { getBusinessProfiles, getPublishedPosts, getUserAds } from "@/app/api/businessProfile"
+import Link from "next/link"
+import { toast } from "react-toastify"
 
 interface BusinessProfile {
-  id: string
+  id: number
   businessName: string
   niche: string
   productService: string
   targetAudience: string
   adGoal: string
   createdAt: string
-  totalAds: number
+  _count?: { ads: number }
+}
+
+interface AdHistoryItem {
+  id: number
+  imageUrl: string | null
+  isVideo: boolean
+  generatedAt: string
+  businessProfile: { id: number; businessName: string }
+  _count?: { publishedPosts: number }
 }
 
 export function UserDashboard() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("all")
   const [showCreateProfile, setShowCreateProfile] = useState(false)
+  const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState("profiles")
+  const [publishedCount, setPublishedCount] = useState(0)
+  const [adHistory, setAdHistory] = useState<AdHistoryItem[]>([])
+  const [adsLoading, setAdsLoading] = useState(false)
+  const [adPage, setAdPage] = useState(1)
+  const [adTotalPages, setAdTotalPages] = useState(1)
+  const [adsLoaded, setAdsLoaded] = useState(false)
 
-  // Mock data
-  const [generatedAds] = useState<GeneratedAd[]>([
-    {
-      id: "1",
-      title: "Conversion-Focused Ad",
-      headline: "Transform Your Business Today",
-      description: "Join thousands who've discovered our solution...",
-      imageUrl: "/business-success.png",
-      businessProfile: "Tech Startup",
-      createdAt: "2024-01-15",
-      status: "active",
-      performance: {
-        impressions: 12500,
-        clicks: 350,
-        ctr: 2.8,
-        conversions: 45,
-      },
-      platforms: ["Facebook", "Instagram"],
-    },
-    {
-      id: "2",
-      title: "Emotional Connection Ad",
-      headline: "Finally, A Solution That Understands You",
-      description: "We know how challenging it can be...",
-      imageUrl: "/customer-satisfaction.png",
-      businessProfile: "E-commerce Store",
-      createdAt: "2024-01-14",
-      status: "paused",
-      performance: {
-        impressions: 8200,
-        clicks: 164,
-        ctr: 2.0,
-        conversions: 22,
-      },
-      platforms: ["LinkedIn", "Twitter"],
-    },
-    {
-      id: "3",
-      title: "Social Proof Ad",
-      headline: "Why 10,000+ Customers Choose Us",
-      description: "Customer testimonials and success stories...",
-      imageUrl: "/testimonials-success.jpg",
-      businessProfile: "SaaS Platform",
-      createdAt: "2024-01-13",
-      status: "draft",
-      performance: {
-        impressions: 0,
-        clicks: 0,
-        ctr: 0,
-        conversions: 0,
-      },
-      platforms: [],
-    },
-  ])
+  const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || ""
 
-  const [businessProfiles] = useState<BusinessProfile[]>([
-    {
-      id: "1",
-      businessName: "Tech Startup",
-      niche: "Technology",
-      productService: "AI-powered analytics platform",
-      targetAudience: "Small to medium businesses",
-      adGoal: "Increase sign-ups",
-      createdAt: "2024-01-10",
-      totalAds: 5,
-    },
-    {
-      id: "2",
-      businessName: "E-commerce Store",
-      niche: "Retail",
-      productService: "Sustainable fashion products",
-      targetAudience: "Environmentally conscious consumers",
-      adGoal: "Drive sales",
-      createdAt: "2024-01-08",
-      totalAds: 3,
-    },
-    {
-      id: "3",
-      businessName: "SaaS Platform",
-      niche: "Software",
-      productService: "Project management tool",
-      targetAudience: "Remote teams and freelancers",
-      adGoal: "Increase trial conversions",
-      createdAt: "2024-01-05",
-      totalAds: 7,
-    },
-  ])
+  const loadProfiles = async () => {
+    setIsLoading(true)
+    try {
+      const data = await getBusinessProfiles()
+      setBusinessProfiles(data?.businessProfiles ?? data?.profiles ?? [])
+    } catch (err) {
+      console.error("Failed to load profiles:", err)
+      setBusinessProfiles([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  const filteredAds = generatedAds.filter((ad) => {
-    const matchesSearch =
-      ad.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ad.headline.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ad.businessProfile.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterStatus === "all" || ad.status === filterStatus
-    return matchesSearch && matchesFilter
-  })
+  const loadPublishedCount = async () => {
+    try {
+      const data = await getPublishedPosts()
+      if (data?.success) {
+        setPublishedCount(data.posts?.length || 0)
+      }
+    } catch {
+      setPublishedCount(0)
+    }
+  }
 
-  const totalImpressions = generatedAds.reduce((sum, ad) => sum + ad.performance.impressions, 0)
-  const totalClicks = generatedAds.reduce((sum, ad) => sum + ad.performance.clicks, 0)
-  const totalConversions = generatedAds.reduce((sum, ad) => sum + ad.performance.conversions, 0)
-  const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
+  const loadAds = async (page: number = 1, append: boolean = false) => {
+    setAdsLoading(true)
+    try {
+      const data = await getUserAds(page, 18)
+      if (data?.success) {
+        setAdHistory(prev => append ? [...prev, ...(data.ads || [])] : (data.ads || []))
+        setAdPage(data.pagination?.page || 1)
+        setAdTotalPages(data.pagination?.totalPages || 1)
+      }
+      setAdsLoaded(true)
+    } catch (err) {
+      console.error("Failed to load ads:", err)
+    } finally {
+      setAdsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadProfiles()
+    loadPublishedCount()
+  }, [])
+
+  // Load ads when the user switches to the Ad History tab
+  useEffect(() => {
+    if (activeTab === "ads" && !adsLoaded) {
+      loadAds(1)
+    }
+  }, [activeTab])
+
+  // After profile is created via BusinessProfileForm, redirect to generate-ads
+  const handleProfileSubmit = async (profile: any) => {
+    setShowCreateProfile(false)
+    const id = profile?.id
+    if (id != null) {
+      toast.success(`Profile "${profile.businessName}" created! Redirecting to generate ads...`)
+      router.push(`/generate-ads?profileId=${id}`)
+    } else {
+      // Profile created but no id — just refresh the list
+      await loadProfiles()
+      setActiveTab("profiles")
+    }
+  }
+
+  const filteredProfiles = businessProfiles.filter((p) =>
+    p.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.niche?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Aggregate stats from real data — use _count.ads for accurate total
+  const totalAds = businessProfiles.reduce((sum, p) => sum + (p._count?.ads ?? 0), 0)
+
+  // Show the full-screen BusinessProfileForm (same as landing page Get Started flow)
+  if (showCreateProfile) {
+    return (
+      <BusinessProfileForm
+        onSubmitData={handleProfileSubmit}
+        onBack={() => setShowCreateProfile(false)}
+      />
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      {/* Quick Actions Banner */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <button
+          onClick={() => setShowCreateProfile(true)}
+          className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-all group"
+        >
+          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+            <Building2 className="w-5 h-5 text-indigo-600" />
+          </div>
+          <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">New Business Profile</span>
+        </button>
+
+        <Link href="/generate-ads" className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-purple-300 hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all group">
+          <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+            <Sparkles className="w-5 h-5 text-purple-600" />
+          </div>
+          <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Generate Image Ads</span>
+        </Link>
+
+        <Link href="/generate-ads" className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-pink-300 hover:border-pink-500 hover:bg-pink-50 dark:hover:bg-pink-950/30 transition-all group">
+          <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center group-hover:bg-pink-200 transition-colors">
+            <Video className="w-5 h-5 text-pink-600" />
+          </div>
+          <span className="text-sm font-medium text-pink-700 dark:text-pink-300">Generate Video Ads</span>
+        </Link>
+
+        <Link href="/analytics" className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-dashed border-green-300 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/30 transition-all group">
+          <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+            <BarChart3 className="w-5 h-5 text-green-600" />
+          </div>
+          <span className="text-sm font-medium text-green-700 dark:text-green-300">View Analytics</span>
+        </Link>
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Profiles</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{businessProfiles.length}</div>
+            <p className="text-xs text-muted-foreground">Total created</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Ads</CardTitle>
             <Sparkles className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{generatedAds.length}</div>
-            <p className="text-xs text-muted-foreground">+2 from last month</p>
+            <div className="text-2xl font-bold text-indigo-600">{totalAds}</div>
+            <p className="text-xs text-muted-foreground">Generated so far</p>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Impressions</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Published</CardTitle>
+            <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalImpressions.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgCTR.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">+0.3% from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversions</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalConversions}</div>
-            <p className="text-xs text-muted-foreground">+8 from last month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$12,450</div>
-            <p className="text-xs text-muted-foreground">+18% from last month</p>
+            <div className="text-2xl font-bold text-green-600">{publishedCount}</div>
+            <p className="text-xs text-muted-foreground">Social posts</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="ads" className="space-y-4">
+      {/* Tabs: Profiles & Ad History */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="ads">Generated Ads</TabsTrigger>
-          <TabsTrigger value="profiles">Business Profiles</TabsTrigger>
-          <TabsTrigger value="analytics">Sales Analytics</TabsTrigger>
+          <TabsTrigger value="profiles" className="gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />Profiles ({businessProfiles.length})
+          </TabsTrigger>
+          <TabsTrigger value="ads" className="gap-1.5">
+            <Sparkles className="w-3.5 h-3.5" />Ad History
+          </TabsTrigger>
         </TabsList>
 
-        {/* Generated Ads Tab */}
-        <TabsContent value="ads" className="space-y-4">
+        {/* ── Profiles Tab ────────────────────────────────── */}
+        <TabsContent value="profiles" className="space-y-4 pt-2">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex gap-2 flex-1 max-w-md">
-              <div className="relative flex-1">
+            <div>
+              <h2 className="text-xl font-bold">Your Business Profiles</h2>
+              <p className="text-sm text-gray-500">Select a profile to generate ads for it</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search ads..."
+                  placeholder="Search profiles..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-48"
                 />
               </div>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border rounded-md"
+              <Button
+                onClick={() => setShowCreateProfile(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="draft">Draft</option>
-              </select>
+                <Plus className="w-4 h-4 mr-2" />
+                New Profile
+              </Button>
             </div>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create New Ad
-            </Button>
           </div>
 
-          <div className="grid gap-6">
-            {filteredAds.map((ad) => (
-              <Card key={ad.id}>
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    <div className="flex-shrink-0">
-                      <img
-                        src={ad.imageUrl || "/placeholder.svg"}
-                        alt={ad.title}
-                        className="w-full lg:w-48 h-32 object-cover rounded-lg"
-                      />
-                    </div>
-
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold">{ad.title}</h3>
-                          <p className="text-sm text-gray-600">{ad.businessProfile}</p>
-                        </div>
-                        <Badge
-                          variant={
-                            ad.status === "active" ? "default" : ad.status === "paused" ? "secondary" : "outline"
-                          }
-                        >
-                          {ad.status}
-                        </Badge>
-                      </div>
-
-                      <p className="text-gray-700 line-clamp-2">{ad.headline}</p>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Impressions:</span>
-                          <div className="font-medium">{ad.performance.impressions.toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Clicks:</span>
-                          <div className="font-medium">{ad.performance.clicks}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">CTR:</span>
-                          <div className="font-medium">{ad.performance.ctr}%</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Conversions:</span>
-                          <div className="font-medium">{ad.performance.conversions}</div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-1">
-                          {ad.platforms.map((platform) => (
-                            <Badge key={platform} variant="outline" className="text-xs">
-                              {platform}
-                            </Badge>
-                          ))}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Share2 className="w-4 h-4 mr-1" />
-                            Share
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Download className="w-4 h-4 mr-1" />
-                            Export
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* Business Profiles Tab */}
-        <TabsContent value="profiles" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Business Profiles</h2>
-            <Dialog open={showCreateProfile} onOpenChange={setShowCreateProfile}>
-              <DialogTrigger asChild>
-                <Button>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+              <span className="ml-3 text-gray-500">Loading your profiles...</span>
+            </div>
+          ) : filteredProfiles.length === 0 ? (
+            <Card className="border-dashed border-2">
+              <CardContent className="py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto">
+                  <Building2 className="w-8 h-8 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">No business profiles yet</h3>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Create your first profile to start generating AI-powered ads
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setShowCreateProfile(true)}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Profile
+                  Create Your First Profile
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Business Profile</DialogTitle>
-                </DialogHeader>
-                <CreateProfileForm onClose={() => setShowCreateProfile(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {businessProfiles.map((profile) => (
-              <Card key={profile.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{profile.businessName}</CardTitle>
-                  <Badge variant="secondary">{profile.niche}</Badge>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label className="text-sm text-gray-600">Product/Service</Label>
-                    <p className="text-sm">{profile.productService}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-gray-600">Target Audience</Label>
-                    <p className="text-sm">{profile.targetAudience}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-gray-600">Ad Goal</Label>
-                    <p className="text-sm">{profile.adGoal}</p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-sm text-gray-500">{profile.totalAds} ads created</span>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4" />
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredProfiles.map((profile) => (
+                <Card key={profile.id} className="group hover:shadow-lg transition-all hover:border-indigo-300">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-base font-bold group-hover:text-indigo-700 transition-colors">
+                          {profile.businessName}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs capitalize">{profile.niche}</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {profile._count?.ads  || 0} ads
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-5 h-5 text-indigo-600" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3 pt-0">
+                    <div>
+                      <Label className="text-xs text-gray-500 uppercase tracking-wide">Product/Service</Label>
+                      <p className="text-sm mt-0.5 line-clamp-2">{profile.productService}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Audience</Label>
+                        <p className="text-xs mt-0.5 line-clamp-1">{profile.targetAudience}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Goal</Label>
+                        <p className="text-xs mt-0.5 line-clamp-1 capitalize">{profile.adGoal.replace(/-/g, " ")}</p>
+                      </div>
+                    </div>
+                    <div className="pt-2 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                        onClick={() => router.push(`/generate-ads?profileId=${profile.id}`)}
+                      >
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Generate Ads
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="w-4 h-4" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-xs"
+                        onClick={() => router.push(`/generate-ads?profileId=${profile.id}`)}
+                      >
+                        <Video className="w-3 h-3 mr-1" />
+                        Video Ads
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Add New Profile Card */}
+              <button
+                onClick={() => setShowCreateProfile(true)}
+                className="min-h-[200px] rounded-xl border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all flex flex-col items-center justify-center gap-3 group"
+              >
+                <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                  <Plus className="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-500 group-hover:text-indigo-700 transition-colors text-sm">Add New Profile</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Create a new business profile</p>
+                </div>
+              </button>
+            </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
-          <SalesProfileTracking />
+        {/* ── Ad History Tab ─────────────────────────────── */}
+        <TabsContent value="ads" className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">Generated Ad History</h2>
+              <p className="text-sm text-gray-500">All your AI-generated ads across profiles</p>
+            </div>
+            <Link href="/generate-ads">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" size="sm">
+                <Sparkles className="w-4 h-4 mr-2" />Generate New Ads
+              </Button>
+            </Link>
+          </div>
+
+          {adsLoading && adHistory.length === 0 ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+              <span className="ml-3 text-gray-500">Loading your ads...</span>
+            </div>
+          ) : adHistory.length === 0 ? (
+            <Card className="border-dashed border-2">
+              <CardContent className="py-16 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto">
+                  <Sparkles className="w-8 h-8 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">No ads generated yet</h3>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Create a business profile and generate your first AI-powered ad
+                  </p>
+                </div>
+                <Link href="/generate-ads">
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    <Sparkles className="w-4 h-4 mr-2" />Generate Ads
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {adHistory.map((ad) => {
+                  const publishCount = ad._count?.publishedPosts ?? 0
+                  const adLabel = ad.isVideo ? "Video Ad" : "Image Ad"
+                  return (
+                    <Card key={ad.id} className="overflow-hidden hover:shadow-lg transition-all group">
+                      {/* Ad Image Thumbnail */}
+                      {ad.imageUrl ? (
+                        <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 overflow-hidden relative">
+                          <img
+                            src={ad.imageUrl.startsWith("http") ? ad.imageUrl : `${BACKEND_URL}${ad.imageUrl}`}
+                            alt={adLabel}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                          />
+                          <div className="absolute top-2 left-2 flex gap-1.5">
+                            <Badge className={`text-[10px] ${ad.isVideo ? "bg-pink-600" : "bg-purple-600"} text-white border-0`}>
+                              {ad.isVideo ? <><Video className="w-2.5 h-2.5 mr-0.5" />Video</> : <><ImageIcon className="w-2.5 h-2.5 mr-0.5" />Image</>}
+                            </Badge>
+                            {publishCount > 0 && (
+                              <Badge className="text-[10px] bg-green-600 text-white border-0">
+                                <Globe className="w-2.5 h-2.5 mr-0.5" />{publishCount} published
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full h-28 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 flex items-center justify-center relative">
+                          {ad.isVideo
+                            ? <Video className="w-10 h-10 text-pink-400" />
+                            : <ImageIcon className="w-10 h-10 text-indigo-400" />
+                          }
+                          <div className="absolute top-2 left-2 flex gap-1.5">
+                            <Badge className={`text-[10px] ${ad.isVideo ? "bg-pink-600" : "bg-purple-600"} text-white border-0`}>
+                              {ad.isVideo ? "Video" : "Image"}
+                            </Badge>
+                            {publishCount > 0 && (
+                              <Badge className="text-[10px] bg-green-600 text-white border-0">
+                                <Globe className="w-2.5 h-2.5 mr-0.5" />{publishCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <CardContent className="p-4 space-y-2">
+                        <h3 className="font-semibold text-sm">
+                          {adLabel} #{ad.id}
+                        </h3>
+
+                        {/* Meta row */}
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {ad.businessProfile?.businessName}
+                            </Badge>
+                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {new Date(ad.generatedAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => router.push(`/generate-ads?profileId=${ad.businessProfile?.id}`)}
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" />View
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+
+              {/* Load More pagination */}
+              {adPage < adTotalPages && (
+                <div className="flex justify-center pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => loadAds(adPage + 1, true)}
+                    disabled={adsLoading}
+                    className="gap-2"
+                  >
+                    {adsLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                    Load More
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </TabsContent>
       </Tabs>
+
+      {/* Navigation Cards */}
+      <div className="grid md:grid-cols-3 gap-4 pt-2">
+        <Link href="/social">
+          <Card className="hover:shadow-md hover:border-green-300 transition-all cursor-pointer group">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                <Globe className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Social Media</h3>
+                <p className="text-xs text-gray-500">View published & scheduled posts</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/analytics">
+          <Card className="hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                <BarChart3 className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Analytics</h3>
+                <p className="text-xs text-gray-500">Track ad performance & CTR</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/generate-ads">
+          <Card className="hover:shadow-md hover:border-purple-300 transition-all cursor-pointer group">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                <Sparkles className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Ad Generator</h3>
+                <p className="text-xs text-gray-500">Create image & video ads with AI</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
     </div>
-  )
-}
-
-function CreateProfileForm({ onClose }: { onClose: () => void }) {
-  const [formData, setFormData] = useState({
-    businessName: "",
-    niche: "",
-    productService: "",
-    targetAudience: "",
-    adGoal: "",
-  })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Creating profile:", formData)
-    onClose()
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="businessName">Business Name</Label>
-        <Input
-          id="businessName"
-          value={formData.businessName}
-          onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-          placeholder="Enter your business name"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="niche">Niche</Label>
-        <Input
-          id="niche"
-          value={formData.niche}
-          onChange={(e) => setFormData({ ...formData, niche: e.target.value })}
-          placeholder="e.g., Technology, Healthcare, E-commerce"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="productService">Product/Service</Label>
-        <Input
-          id="productService"
-          value={formData.productService}
-          onChange={(e) => setFormData({ ...formData, productService: e.target.value })}
-          placeholder="Describe your main product or service"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="targetAudience">Target Audience</Label>
-        <Input
-          id="targetAudience"
-          value={formData.targetAudience}
-          onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
-          placeholder="Who is your ideal customer?"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="adGoal">Advertising Goal</Label>
-        <Input
-          id="adGoal"
-          value={formData.adGoal}
-          onChange={(e) => setFormData({ ...formData, adGoal: e.target.value })}
-          placeholder="e.g., Increase sales, Generate leads, Build awareness"
-        />
-      </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          Create Profile
-        </Button>
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-      </div>
-    </form>
   )
 }

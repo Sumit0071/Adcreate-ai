@@ -11,9 +11,10 @@ export const PlanEnum = z.enum(["BASIC", "PREMIUM", "ENTERPRISE"]);
 export const UserSchema = z.object({
   id: z.number().int().positive().optional(),
   username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.email("Invalid email address"),
+  email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   Avatar: z
+    .string()
     .url("Invalid avatar URL")
     .optional()
     .default(
@@ -52,6 +53,10 @@ export const BusinessProfileSchema = z.object({
   updatedAt: z.date().optional(),
 });
 
+export const GenerateAdSchema = BusinessProfileSchema.extend({
+  specialInstructions: z.string().optional(),
+});
+
 // ================= WhatsAppChat Schema ================= //
 export const WhatsAppChatSchema = z.object({
   id: z.number().int().positive().optional(),
@@ -61,7 +66,7 @@ export const WhatsAppChatSchema = z.object({
   phoneNumber: z.string().min(5, "Phone number is required"),
   contentType: ContentTypeEnum,
   messageText: z.string().optional(),
-  mediaUrl: z.url("Invalid media URL").optional(),
+  mediaUrl: z.string().url("Invalid media URL").optional(),
   timestamp: z.date(),
 
   userId: z.number().int().positive(),

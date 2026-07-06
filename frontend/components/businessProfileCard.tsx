@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Building2, Target, Package, Users, Fullscreen as Bullseye } from "lucide-react"
-
-interface BusinessProfile {
+import { createBusinessProfile } from "@/app/api/businessProfile"
+export interface BusinessProfile {
   businessName: string
   niche: string
   productService: string
@@ -20,11 +20,10 @@ interface BusinessProfile {
 }
 
 interface BusinessProfileFormProps {
-  onSubmit: (profile: BusinessProfile) => void
   onBack: () => void
 }
 
-export function BusinessProfileCard({ onSubmit, onBack }: BusinessProfileFormProps) {
+export function BusinessProfileCard({ onBack }: BusinessProfileFormProps) {
   const [formData, setFormData] = useState<BusinessProfile>({
     businessName: "",
     niche: "",
@@ -32,20 +31,29 @@ export function BusinessProfileCard({ onSubmit, onBack }: BusinessProfileFormPro
     targetAudience: "",
     adGoal: "",
   })
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (Object.values(formData).every((value) => value.trim() !== "")) {
-      onSubmit(formData)
-    }
-  }
-
+  const [loading, setLoading] = useState( false )
+  
+  
   const handleInputChange = (field: keyof BusinessProfile, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const isFormValid = Object.values(formData).every((value) => value.trim() !== "")
-
+  const handleSubmit = async( e: React.FormEvent ) => {
+    e.preventDefault()
+    if ( !isFormValid ) return;
+    try {
+      setLoading( true )
+      const result = await createBusinessProfile( formData )
+      console.log( "✅ Business profile created:", result )
+    }
+    catch ( error ) {
+      console.error( "❌ Error creating business profile:", error )
+    }
+  finally {
+      setLoading(false)
+    }
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4">
       <div className="container mx-auto max-w-2xl">
@@ -85,7 +93,7 @@ export function BusinessProfileCard({ onSubmit, onBack }: BusinessProfileFormPro
                   <Target className="w-4 h-4 text-indigo-600" />
                   Business Niche
                 </Label>
-                <Select onValueChange={(value) => handleInputChange("niche", value)}>
+                <Select value={formData.niche} onValueChange={(value) => handleInputChange("niche", value)}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Select your business niche" />
                   </SelectTrigger>
@@ -141,7 +149,7 @@ export function BusinessProfileCard({ onSubmit, onBack }: BusinessProfileFormPro
                   <Bullseye className="w-4 h-4 text-orange-600" />
                   Advertising Goal
                 </Label>
-                <Select onValueChange={(value) => handleInputChange("adGoal", value)}>
+                <Select value={formData.adGoal} onValueChange={(value) => handleInputChange("adGoal", value)}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="What's your primary advertising goal?" />
                   </SelectTrigger>
@@ -160,7 +168,7 @@ export function BusinessProfileCard({ onSubmit, onBack }: BusinessProfileFormPro
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
-                disabled={!isFormValid}
+                disabled={!isFormValid || loading}
               >
                 Continue to Ad Generation
               </Button>

@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Building2, Target, Package, Users, Fullscreen as Bullseye } from "lucide-react"
-
-interface BusinessProfile {
+import { createBusinessProfile } from "@/app/api/businessProfile"
+import { useThemeStore } from "@/store/useThemeStore"
+export interface BusinessProfile {
   businessName: string
   niche: string
   productService: string
@@ -20,44 +21,80 @@ interface BusinessProfile {
 }
 
 interface BusinessProfileFormProps {
-  onSubmit: (profile: BusinessProfile) => void
+  onSubmitData?: ( data: BusinessProfile ) => Promise<any>
   onBack: () => void
 }
 
-export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormProps) {
-  const [formData, setFormData] = useState<BusinessProfile>({
+export function BusinessProfileForm( { onSubmitData, onBack }: BusinessProfileFormProps ) {
+  const { theme } = useThemeStore()
+  const [formData, setFormData] = useState<BusinessProfile>( {
     businessName: "",
     niche: "",
     productService: "",
     targetAudience: "",
     adGoal: "",
-  })
+  } )
+  const [loading, setLoading] = useState( false )
+  const [redirecting, setRedirecting] = useState( false )
 
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleInputChange = ( field: keyof BusinessProfile, value: string ) => {
+    setFormData( ( prev ) => ( { ...prev, [field]: value } ) )
+  }
+
+  const isFormValid = Object.values( formData ).every( ( value ) => value.trim() !== "" )
+  const handleSubmit = async ( e: React.FormEvent ) => {
     e.preventDefault()
-    if (Object.values(formData).every((value) => value.trim() !== "")) {
-      onSubmit(formData)
+    if ( !isFormValid ) return;
+    try {
+      setLoading( true )
+      const result = await createBusinessProfile( formData )
+      console.log( "✅ Business profile created:", result )
+      if ( onSubmitData ) {
+        setRedirecting( true )
+        await onSubmitData( result.businessProfile )
+      }
+    }
+    catch ( error ) {
+      console.error( "❌ Error creating business profile:", error )
+    }
+    finally {
+      setLoading( false )
     }
   }
 
-  const handleInputChange = (field: keyof BusinessProfile, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+  if ( redirecting ) {
+    return (
+      <div
+        className={`min-h-screen flex items-center justify-center px-4 ${theme === "dark"
+          ? "bg-gradient-to-bl from-gray-800 via-gray-900 to-slate-950 text-white"
+          : "bg-gradient-to-bl from-white via-blue-50 to-pink-100 text-gray-900"
+          }`}
+      >
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+          <h2 className="text-xl font-semibold">Redirecting to Generate Ads…</h2>
+          <p className={`mt-1 text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+            Preparing your ad generation page.
+          </p>
+        </div>
+      </div>
+    )
   }
-
-  const isFormValid = Object.values(formData).every((value) => value.trim() !== "")
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8 px-4">
+    <div className={`min-h-screen bg-gradient-to-br from-slate-500 via-blue-50 to-indigo-50 py-8 px-4 ${theme === "dark"
+      ? "bg-gradient-to-bl from-gray-800 via-gray-900 to-slate-950 text-white"
+      : "bg-gradient-to-bl from-white via-blue-50 to-pink-100"}`}>
       <div className="container mx-auto max-w-2xl">
-        <Button variant="ghost" onClick={onBack} className="mb-6 text-gray-600 hover:text-gray-900">
+        <Button variant="ghost" onClick={onBack} className={`mb-6 hover:text-gray-900 ${theme === "dark" ? "text-white" : "text-gray-600"}`}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home
         </Button>
 
-        <Card className="shadow-xl border-0">
+        <Card className={`shadow-xl border-0 ${theme === "dark" ? "bg-gray-900 text-white" : "bg-white"}`}>
           <CardHeader className="text-center pb-8">
-            <CardTitle className="text-3xl font-bold text-gray-900">Create Your Business Profile</CardTitle>
-            <CardDescription className="text-lg text-gray-600">
+            <CardTitle className="text-3xl font-bold ">Create Your Business Profile</CardTitle>
+            <CardDescription className="text-lg">
               Tell us about your business to generate targeted ads that convert
             </CardDescription>
           </CardHeader>
@@ -74,7 +111,7 @@ export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormPro
                   id="businessName"
                   placeholder="Enter your business name"
                   value={formData.businessName}
-                  onChange={(e) => handleInputChange("businessName", e.target.value)}
+                  onChange={( e ) => handleInputChange( "businessName", e.target.value )}
                   className="h-12"
                 />
               </div>
@@ -85,7 +122,7 @@ export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormPro
                   <Target className="w-4 h-4 text-indigo-600" />
                   Business Niche
                 </Label>
-                <Select onValueChange={(value) => handleInputChange("niche", value)}>
+                <Select value={formData.niche} onValueChange={( value ) => handleInputChange( "niche", value )}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Select your business niche" />
                   </SelectTrigger>
@@ -115,7 +152,7 @@ export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormPro
                   id="productService"
                   placeholder="Describe what you offer (e.g., 'Online fitness coaching platform with personalized workout plans')"
                   value={formData.productService}
-                  onChange={(e) => handleInputChange("productService", e.target.value)}
+                  onChange={( e ) => handleInputChange( "productService", e.target.value )}
                   className="min-h-[100px] resize-none"
                 />
               </div>
@@ -130,7 +167,7 @@ export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormPro
                   id="targetAudience"
                   placeholder="Describe your ideal customers (e.g., 'Busy professionals aged 25-40 who want to stay fit but lack time for gym')"
                   value={formData.targetAudience}
-                  onChange={(e) => handleInputChange("targetAudience", e.target.value)}
+                  onChange={( e ) => handleInputChange( "targetAudience", e.target.value )}
                   className="min-h-[100px] resize-none"
                 />
               </div>
@@ -141,7 +178,7 @@ export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormPro
                   <Bullseye className="w-4 h-4 text-orange-600" />
                   Advertising Goal
                 </Label>
-                <Select onValueChange={(value) => handleInputChange("adGoal", value)}>
+                <Select value={formData.adGoal} onValueChange={( value ) => handleInputChange( "adGoal", value )}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="What's your primary advertising goal?" />
                   </SelectTrigger>
@@ -160,7 +197,7 @@ export function BusinessProfileForm({ onSubmit, onBack }: BusinessProfileFormPro
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium"
-                disabled={!isFormValid}
+                disabled={!isFormValid || loading}
               >
                 Continue to Ad Generation
               </Button>
