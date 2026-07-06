@@ -270,4 +270,19 @@ export const generateAdSequence = async (req: Request, res: Response) => {
   }
 };
 
+export const generateCampaignBrief = async (req: Request, res: Response) => {
+  try {
+    const { generateStudioCampaignAds } = require("../utils/campaignStudioGenerator");
+    const brief = req.body;
+    const ads = await generateStudioCampaignAds(brief);
+    res.status(200).json({
+      success: true,
+      ads,
+    });
+  } catch (error) {
+    console.error("Error in generateCampaignBrief:", error);
+    res.status(500).json({ message: "Internal server error", success: false });
+  }
+};
+
 
