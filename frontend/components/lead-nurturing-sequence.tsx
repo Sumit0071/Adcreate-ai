@@ -6,7 +6,13 @@ import { useThemeStore } from "@/store/useThemeStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, MessageSquare, Mail, Smartphone } from "lucide-react";
+import { Copy, MessageSquare, Mail, Smartphone, Download, FileText, Sheet, File } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "react-toastify";
 
 interface LeadNurturingProps {
@@ -30,19 +36,142 @@ export default function LeadNurturingSequence({ messages, brief }: LeadNurturing
     toast.success("Message copied!");
   };
 
-  const exportSequence = () => {
-    let text = `Lead Nurturing Sequence — ${brief.businessName}\n${"=".repeat(50)}\n\n`;
+  // Export as TXT
+  const exportSequenceAsText = () => {
+    let text = `LEAD NURTURING SEQUENCE\n`;
+    text += `${"=".repeat(70)}\n`;
+    text += `Business: ${brief.businessName}\n`;
+    text += `Generated: ${new Date().toLocaleDateString()}\n`;
+    text += `${"=".repeat(70)}\n\n`;
+
     messages.forEach(msg => {
-      text += `Day ${msg.day} — ${msg.label} (${msg.channel})\n`;
+      text += `DAY ${msg.day} — ${msg.label}\n`;
+      text += `${"-".repeat(70)}\n`;
+      text += `Purpose: ${msg.purpose}\n`;
+      text += `Channel: ${msg.channel}\n`;
       if (msg.subject) text += `Subject: ${msg.subject}\n`;
-      text += `${msg.message}\n\n---\n\n`;
+      text += `\nMessage:\n${msg.message}\n`;
+      text += `\n${"=".repeat(70)}\n\n`;
     });
+
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `${brief.businessName}_nurturing_sequence.txt`; a.click();
+    a.href = url;
+    a.download = `${brief.businessName.replace(/\s+/g, "_")}_nurturing_sequence_${new Date().toISOString().split("T")[0]}.txt`;
+    a.click();
     URL.revokeObjectURL(url);
-    toast.success("Sequence exported!");
+    toast.success("Sequence exported as TXT!");
+  };
+
+  // Export as CSV
+  const exportSequenceAsCSV = () => {
+    let csv = "Lead Nurturing Sequence\n";
+    csv += `Business,Generated Date\n`;
+    csv += `"${brief.businessName}","${new Date().toLocaleDateString()}"\n\n`;
+
+    csv += "Day,Label,Purpose,Channel,Subject,Message\n";
+    messages.forEach(msg => {
+      const message = msg.message.replace(/"/g, '""').replace(/\n/g, " ");
+      const subject = msg.subject ? msg.subject.replace(/"/g, '""') : "";
+      csv += `${msg.day},"${msg.label}","${msg.purpose}","${msg.channel}","${subject}","${message}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${brief.businessName.replace(/\s+/g, "_")}_nurturing_sequence_${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Sequence exported as CSV!");
+  };
+
+  // Export as PDF
+  const exportSequenceAsPDF = async () => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF();
+
+      let yPosition = 10;
+
+      // Title
+      doc.setFontSize(16);
+      doc.text("Lead Nurturing Sequence", 10, yPosition);
+      yPosition += 10;
+
+      // Business info
+      doc.setFontSize(10);
+      doc.text(`Business: ${brief.businessName}`, 10, yPosition);
+      yPosition += 5;
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 10, yPosition);
+      yPosition += 10;
+
+      // Messages table
+      const messagesData = [
+        ["Day", "Label", "Purpose", "Channel", "Subject"],
+        ...messages.map(msg => [
+          `Day ${msg.day}`,
+          msg.label,
+          msg.purpose.substring(0, 20),
+          msg.channel,
+          msg.subject ? msg.subject.substring(0, 20) : "—"
+        ])
+      ];
+
+      doc.autoTable({
+        head: [messagesData[0]],
+        body: messagesData.slice(1),
+        startY: yPosition,
+        margin: { left: 10, right: 10 },
+      });
+
+      // Add detailed messages
+      messages.forEach((msg, idx) => {
+        yPosition = (doc as any).lastAutoTable.finalY + 12;
+
+        if (yPosition > 250) {
+          doc.addPage();
+          yPosition = 10;
+        }
+
+        doc.setFontSize(11);
+        doc.text(`Day ${msg.day}: ${msg.label}`, 10, yPosition);
+        yPosition += 6;
+
+        doc.setFontSize(9);
+        doc.text(`Purpose: ${msg.purpose}`, 10, yPosition);
+        yPosition += 4;
+        doc.text(`Channel: ${msg.channel}`, 10, yPosition);
+        yPosition += 4;
+
+        if (msg.subject) {
+          doc.text(`Subject: ${msg.subject}`, 10, yPosition);
+          yPosition += 4;
+        }
+
+        // Message content
+        const messageLines = doc.splitTextToSize(msg.message, 180);
+        messageLines.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 10;
+          }
+          doc.text(line, 10, yPosition);
+          yPosition += 4;
+        });
+
+        yPosition += 2;
+        doc.setDrawColor(200);
+        doc.line(10, yPosition, 200, yPosition);
+      });
+
+      doc.save(`${brief.businessName.replace(/\s+/g, "_")}_nurturing_sequence_${new Date().toISOString().split("T")[0]}.pdf`);
+      toast.success("Sequence exported as PDF!");
+    } catch (error) {
+      toast.error("PDF export requires jsPDF library. Please install it.");
+      console.error("PDF export error:", error);
+    }
   };
 
   return (
@@ -53,7 +182,28 @@ export default function LeadNurturingSequence({ messages, brief }: LeadNurturing
             <MessageSquare className="w-5 h-5 text-green-500" />
             Lead Nurturing Sequence
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={exportSequence}>Export</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-1" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportSequenceAsText} className="cursor-pointer">
+                <FileText className="w-4 h-4 mr-2" />
+                Export as TXT
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportSequenceAsCSV} className="cursor-pointer">
+                <Sheet className="w-4 h-4 mr-2" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportSequenceAsPDF} className="cursor-pointer">
+                <File className="w-4 h-4 mr-2" />
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
       <CardContent>
