@@ -296,16 +296,6 @@ export default function Home() {
               <div className="flex items-center gap-x-4">
                 <NavbarButton
                   variant="dark"
-                  className="rounded-full"
-                  href="https://github.com/Sumit0071/Adcreate-ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title="View on GitHub"
-                >
-                  <Github className="w-5 h-5" />
-                </NavbarButton>
-                <NavbarButton
-                  variant="dark"
                   onClick={toggleTheme}
                   className="rounded-full"
                 >
