@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "react-toastify";
+import "jspdf-autotable";
 
 interface LeadNurturingProps {
   messages: NurturingMessage[];
