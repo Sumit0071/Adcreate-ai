@@ -110,6 +110,13 @@ export default function Home() {
     const initVanta = async () => {
       const win = window as any;
   
+      if (!win.THREE) {
+        const threeLoaded = await loadScript(
+          "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        );
+        if (!threeLoaded || !isMounted) return;
+      }
+  
       if (!win.p5) {
         const p5Loaded = await loadScript(
           "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"
@@ -219,6 +226,7 @@ export default function Home() {
   };
   const navItems = [
     { name: "Home", link: "/" },
+    { name: "Campaign Studio", link: "/campaign-studio" },
     { name: "Dashboard", link: "/dashboard" },
     { name: "About", link: "/about" },
   ];
@@ -286,20 +294,6 @@ export default function Home() {
                 />
               </div>
               <div className="flex items-center gap-x-4">
-                <a
-                  href="https://github.com/Sumit0071/Adcreate-ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center"
-                  title="View on GitHub"
-                >
-                  <NavbarButton
-                    variant="dark"
-                    className="rounded-full"
-                  >
-                    <Github className="w-5 h-5" />
-                  </NavbarButton>
-                </a>
                 <NavbarButton
                   variant="dark"
                   onClick={toggleTheme}

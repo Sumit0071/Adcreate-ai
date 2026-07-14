@@ -1,11 +1,12 @@
 import express, { Router } from "express";
 import isAuthenticated from "../middleware/authMiddleware";
-import { createBusinessProfile, updateBusinessDetails, deleteBusinessProfile, generateAdSequence, getBusinessProfiles, getBusinessProfileById, getUserAds } from "../controllers/businessProfileController";
+import { createBusinessProfile, updateBusinessDetails, deleteBusinessProfile, generateAdSequence, getBusinessProfiles, getBusinessProfileById, getUserAds, generateCampaignBrief } from "../controllers/businessProfileController";
 import { validateRequest } from "../middleware/validateRequest";
 import { BusinessProfileSchema } from "../utils/validate";
 import { singleUpload } from "../middleware/multer";
 const router: Router = express.Router();
 
+router.route("/generate-campaign-brief").post(generateCampaignBrief);
 router.route("/all").get(isAuthenticated, getBusinessProfiles);
 router.route("/ads").get(isAuthenticated, getUserAds);
 router.route("/:id").get(isAuthenticated, getBusinessProfileById);
