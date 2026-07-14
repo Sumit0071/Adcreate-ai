@@ -286,3 +286,57 @@ export const generateCampaignBrief = async (req: Request, res: Response) => {
 };
 
 
+export const getUserAdById = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).id;
+    const { adId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const ad = await prisma.ad.findFirst({
+      where: {
+        id: Number(adId),
+        businessProfile: {
+          userId,
+        },
+      },
+      include: {
+        businessProfile: {
+          select: {
+            id: true,
+            businessName: true,
+            niche: true,
+            productService: true,
+            targetAudience: true,
+            adGoal: true,
+          },
+        },
+        publishedPosts: true,
+      },
+    });
+
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: "Ad not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ad,
+    });
+  } catch (error) {
+    console.error("Error fetching ad:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

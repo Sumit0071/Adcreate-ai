@@ -75,7 +75,22 @@ export const getUserAds = async (page: number = 1, take: number = 20) => {
     throw error;
   }
 };
+//ad by id 
+export const getUserAdById = async (adId: number) => {
+  try {
+    const response = await axios.get(
+      `${API_URL}/api/v1/business/ads/${adId}`,
+      {
+        withCredentials: true,
+      }
+    );
 
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching ad:", error);
+    throw error;
+  }
+};
 // ================== AD GENERATION APIs ==================
 
 // Generate image ads for a specific profile (data can be plain object or FormData for file upload)

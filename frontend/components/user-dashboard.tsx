@@ -18,6 +18,8 @@ import { BusinessProfileForm } from "./business-profile-form"
 import { getBusinessProfiles, getPublishedPosts, getUserAds } from "@/app/api/businessProfile"
 import Link from "next/link"
 import { toast } from "react-toastify"
+import AdPreview from "@/components/ad-preview";
+import { getUserAdById } from "@/app/api/businessProfile";
 
 interface BusinessProfile {
   id: number
@@ -52,8 +54,22 @@ export function UserDashboard() {
   const [adPage, setAdPage] = useState(1)
   const [adTotalPages, setAdTotalPages] = useState(1)
   const [adsLoaded, setAdsLoaded] = useState(false)
-
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedAd, setSelectedAd] = useState(null);
   const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || ""
+
+  const handleViewAd = async (id: number) => {
+    try {
+      const res = await getUserAdById(id);
+  
+      if (res.success) {
+        setSelectedAd(res.ad);
+        setPreviewOpen(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const loadProfiles = async () => {
     setIsLoading(true)
@@ -452,12 +468,12 @@ export function UserDashboard() {
                               {new Date(ad.generatedAt).toLocaleDateString()}
                             </span>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => router.push(`/generate-ads?profileId=${ad.businessProfile?.id}`)}
-                          >
+                         <Button
+  size="sm"
+  variant="ghost"
+  className="h-7 px-2 text-xs"
+  onClick={() => handleViewAd(ad.id)}
+>
                             <ExternalLink className="w-3 h-3 mr-1" />View
                           </Button>
                         </div>
@@ -532,6 +548,14 @@ export function UserDashboard() {
           </Card>
         </Link>
       </div>
+    
+      <AdPreview
+  open={previewOpen}
+  onOpenChange={setPreviewOpen}
+  ad={selectedAd}
+/>
     </div>
+
+    
   )
 }

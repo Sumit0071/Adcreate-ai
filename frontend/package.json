@@ -73,8 +73,6 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^3.0.0",
-    "@types/jspdf": "^2.5.16",
-    "@types/jspdf-autotable": "^3.5.31",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

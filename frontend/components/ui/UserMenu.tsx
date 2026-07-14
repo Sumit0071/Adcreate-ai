@@ -3,8 +3,18 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 export default function UserMenu( { User }: { User: any } ) {
   const [open, setOpen] = useState( false );
+  const [avatarSrc, setAvatarSrc] = useState( "/default-avatar.svg" );
   const { user, isLoggedIn, logout } = useAuthStore();
   const menuRef = useRef<HTMLDivElement>( null );
+
+  const profileUser = ( User ?? user )?.user ?? ( User ?? user );
+  const displayName = profileUser?.username || profileUser?.name || "User";
+
+  useEffect( () => {
+    const resolvedAvatar =
+      profileUser?.Avatar || profileUser?.avatar || profileUser?.image || "/default-avatar.svg";
+    setAvatarSrc( resolvedAvatar );
+  }, [profileUser] );
 
   const handleSignOut = () => {
     document.cookie = "token=; Max-Age=0; path=/;";
@@ -33,9 +43,10 @@ export default function UserMenu( { User }: { User: any } ) {
         onClick={() => setOpen( ( prev ) => !prev )}
       >
         <img
-          src={user?.user?.Avatar || "/default-avatar.png"}
-          alt={user?.user?.username || "User"}
-          className="w-10 h-10 rounded-full border"
+          src={avatarSrc}
+          alt={displayName}
+          onError={() => setAvatarSrc( "/default-avatar.svg" )}
+          className="w-10 h-10 rounded-full border object-cover"
         />
       </div>
 
@@ -44,7 +55,7 @@ export default function UserMenu( { User }: { User: any } ) {
         <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-50">
           <div className="px-4 py-2 text-sm text-gray-700 border-b">
             Signed in as <br />
-            <span className="font-semibold">{user?.user?.username || "Anonymous"}</span>
+            <span className="font-semibold">{displayName}</span>
           </div>
 
           <a
