@@ -76,69 +76,69 @@ const plans = [
     isPro: true
   }
 ]
-const loadScript = (src: string) => {
-  return new Promise((resolve) => {
-    const script = document.createElement("script");
+const loadScript = ( src: string ) => {
+  return new Promise( ( resolve ) => {
+    const script = document.createElement( "script" );
     script.src = src;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
+    script.onload = () => resolve( true );
+    script.onerror = () => resolve( false );
+    document.body.appendChild( script );
+  } );
 };
 
 export default function Home() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
-  const [showProfileForm, setShowProfileForm] = useState(false)
-  const [showWhatsAppImport, setShowWhatsAppImport] = useState(false)
+  const [isOpen, setIsOpen] = useState( false );
+  const [showAuth, setShowAuth] = useState( false );
+  const [showProfileForm, setShowProfileForm] = useState( false )
+  const [showWhatsAppImport, setShowWhatsAppImport] = useState( false )
   const [isAdmin, setIsAdmin] = useState( false )
-  const [loading, setLoading] = useState(false);
-  const heroRef = useRef<HTMLElement | null>(null);
-  const vantaEffectRef = useRef<any>(null);
+  const [loading, setLoading] = useState( false );
+  const heroRef = useRef<HTMLElement | null>( null );
+  const vantaEffectRef = useRef<any>( null );
   const router = useRouter()
   const { user, isLoggedIn, fetchUser, logout, hasFetched } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
-  useEffect(() => {
-    if (!hasFetched) {
+  useEffect( () => {
+    if ( !hasFetched ) {
       fetchUser(); // ✅ only run once
     }
-  }, [hasFetched, fetchUser]);
+  }, [hasFetched, fetchUser] );
 
-  useEffect(() => {
+  useEffect( () => {
     let isMounted = true;
-  
+
     const initVanta = async () => {
       const win = window as any;
-  
-      if (!win.THREE) {
+
+      if ( !win.THREE ) {
         const threeLoaded = await loadScript(
           "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
         );
-        if (!threeLoaded || !isMounted) return;
+        if ( !threeLoaded || !isMounted ) return;
       }
-  
-      if (!win.p5) {
+
+      if ( !win.p5 ) {
         const p5Loaded = await loadScript(
           "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"
         );
-        if (!p5Loaded || !isMounted) return;
+        if ( !p5Loaded || !isMounted ) return;
       }
-  
-      if (!win.VANTA?.TOPOLOGY) {
+
+      if ( !win.VANTA?.TOPOLOGY ) {
         const vantaLoaded = await loadScript(
           "https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js"
         );
-        if (!vantaLoaded || !isMounted) return;
+        if ( !vantaLoaded || !isMounted ) return;
       }
-  
+
       // destroy old instance when theme changes
-      if (vantaEffectRef.current) {
+      if ( vantaEffectRef.current ) {
         vantaEffectRef.current.destroy();
         vantaEffectRef.current = null;
       }
-  
-      if (heroRef.current && win.VANTA?.TOPOLOGY) {
-        vantaEffectRef.current = win.VANTA.TOPOLOGY({
+
+      if ( heroRef.current && win.VANTA?.TOPOLOGY ) {
+        vantaEffectRef.current = win.VANTA.TOPOLOGY( {
           el: heroRef.current,
           mouseControls: true,
           touchControls: true,
@@ -149,47 +149,47 @@ export default function Home() {
           scaleMobile: 1,
           color: theme === "dark" ? 0xea2dc2 : 0xaaaaaa,
           backgroundColor: theme === "dark" ? 0x0e090e : 0xffffff,
-        });
+        } );
       }
     };
-  
+
     initVanta();
-  
+
     return () => {
       isMounted = false;
-      if (vantaEffectRef.current) {
+      if ( vantaEffectRef.current ) {
         vantaEffectRef.current.destroy();
         vantaEffectRef.current = null;
       }
     };
-  }, [theme]);
+  }, [theme] );
 
-  console.log("User", user);
-  const handlePaymentCheckout = async (amount: number, plan: string) => {
+  console.log( "User", user );
+  const handlePaymentCheckout = async ( amount: number, plan: string ) => {
 
-    if (!isLoggedIn) {
-      setShowAuth(true);
+    if ( !isLoggedIn ) {
+      setShowAuth( true );
       return;
     }
     if ( loading ) return;
     setLoading( true );
-  
+
     // FREE PLAN
-    if (plan === "Basic") {
-      alert("Basic plan activated!");
+    if ( plan === "Basic" ) {
+      alert( "Basic plan activated!" );
       return;
     }
-  
-    const res = await loadScript("https://checkout.razorpay.com/v1/checkout.js");
-  
-    if (!res) {
-      alert("Razorpay SDK failed to load.");
+
+    const res = await loadScript( "https://checkout.razorpay.com/v1/checkout.js" );
+
+    if ( !res ) {
+      alert( "Razorpay SDK failed to load." );
       return;
     }
-  
+
     try {
-      const data = await handlePayment(amount, plan);
-  
+      const data = await handlePayment( amount, plan );
+
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: data.order.amount,
@@ -197,28 +197,28 @@ export default function Home() {
         name: "AdCreate.AI",
         description: `${plan} Subscription`,
         order_id: data.order.id,
-  
-        handler: function (response: any) {
-          console.log("Payment success:", response);
-          alert(`${plan} plan activated successfully!`);
+
+        handler: function ( response: any ) {
+          console.log( "Payment success:", response );
+          alert( `${plan} plan activated successfully!` );
         },
-  
+
         prefill: {
           name: user?.username,
           email: user?.email,
         },
-  
+
         theme: {
           color: "#6366f1",
         },
       };
-  
-      const paymentObject = new (window as any).Razorpay(options);
+
+      const paymentObject = new ( window as any ).Razorpay( options );
       paymentObject.open();
-  
-    } catch (error) {
-      console.error("Payment error:", error);
-      alert("Payment failed. Try again.");
+
+    } catch ( error ) {
+      console.error( "Payment error:", error );
+      alert( "Payment failed. Try again." );
     }
     finally {
       setLoading( false );
@@ -231,39 +231,39 @@ export default function Home() {
     { name: "About", link: "/about" },
   ];
 
-  const handleProfileSubmit = async (profile: BusinessProfile & { id?: number }) => {
-    setShowProfileForm(false)
-    setShowWhatsAppImport(false)
+  const handleProfileSubmit = async ( profile: BusinessProfile & { id?: number } ) => {
+    setShowProfileForm( false )
+    setShowWhatsAppImport( false )
     const id = profile?.id
-    if (id != null) {
-      router.push(`/generate-ads?profileId=${id}`)
+    if ( id != null ) {
+      router.push( `/generate-ads?profileId=${id}` )
     }
   }
 
   const handleGetStarted = () => {
-    if (!isLoggedIn) {
-      alert("User not logged in. Redirecting to login/signup.");
-      setShowAuth(true) // open login/signup modal
+    if ( !isLoggedIn ) {
+      alert( "User not logged in. Redirecting to login/signup." );
+      setShowAuth( true ) // open login/signup modal
       return
     }
-    setShowProfileForm(true)
+    setShowProfileForm( true )
   }
 
   const handleWhatsAppImport = () => {
-    if (!isLoggedIn) {
-      alert("User not logged in. Redirecting to login/signup.");
-      setShowAuth(true) // open login/signup modal
+    if ( !isLoggedIn ) {
+      alert( "User not logged in. Redirecting to login/signup." );
+      setShowAuth( true ) // open login/signup modal
       return
     }
-    setShowWhatsAppImport(true)
+    setShowWhatsAppImport( true )
   }
 
-  if (showProfileForm) {
-    return <BusinessProfileForm onSubmitData={handleProfileSubmit} onBack={() => setShowProfileForm(false)} />
+  if ( showProfileForm ) {
+    return <BusinessProfileForm onSubmitData={handleProfileSubmit} onBack={() => setShowProfileForm( false )} />
   }
 
-  if (showWhatsAppImport) {
-    return <WhatsAppChatImport onProfileGenerated={handleProfileSubmit} onBack={() => setShowWhatsAppImport(false)} />
+  if ( showWhatsAppImport ) {
+    return <WhatsAppChatImport onProfileGenerated={handleProfileSubmit} onBack={() => setShowWhatsAppImport( false )} />
   }
 
   return (
@@ -306,7 +306,7 @@ export default function Home() {
                   )}
                 </NavbarButton>
                 {!user ? (
-                  <NavbarButton variant="dark" onClick={() => setShowAuth(true)}>
+                  <NavbarButton variant="dark" onClick={() => setShowAuth( true )}>
                     Sign Up
                   </NavbarButton>
                 ) : (
@@ -321,25 +321,25 @@ export default function Home() {
           <MobileNav>
             <MobileNavHeader>
               <NavbarLogo />
-              <MobileNavToggle isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} />
+              <MobileNavToggle isOpen={isOpen} onClick={() => setIsOpen( !isOpen )} />
             </MobileNavHeader>
-            <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen(false)}>
-              {navItems.map((item, idx) => (
+            <MobileNavMenu isOpen={isOpen} onClose={() => setIsOpen( false )}>
+              {navItems.map( ( item, idx ) => (
                 <a
                   key={idx}
                   href={item.link}
                   className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => setIsOpen( false )}
                 >
                   {item.name}
                 </a>
-              ))}
+              ) )}
               <a
                 href="https://github.com/Sumit0071/Adcreate-ai"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
-                onClick={() => setIsOpen(false)}
+                onClick={() => setIsOpen( false )}
               >
                 GitHub
               </a>
@@ -347,7 +347,7 @@ export default function Home() {
                 <NavbarButton
                   className="mt-4 w-full"
                   variant="dark"
-                  onClick={() => setShowAuth(true)}
+                  onClick={() => setShowAuth( true )}
                 >
                   Sign Up / Login
                 </NavbarButton>
@@ -362,82 +362,82 @@ export default function Home() {
       </header>
 
       {/* Auth Modal */}
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth( false )} />}
 
       {/* Hero Section */}
-<section
-  ref={heroRef}
-  id="hero-vanta"
-  className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
->
-  <div className="container mx-auto max-w-5xl relative z-10">
-    
-    {/* Subheading */}
-    <div className="text-center mb-8">
-      <Badge
-        variant="outline"
-        className="bg-purple-50 text-purple-700 border-purple-200 mb-4"
+      <section
+        ref={heroRef}
+        id="hero-vanta"
+        className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
       >
-        <Sparkles className="w-3 h-3 mr-2" />
-        Save 85% of manual effort
-      </Badge>
-    </div>
+        <div className="container mx-auto max-w-5xl relative z-10">
 
-    {/* Main Heading */}
-    <h1 className={`text-5xl sm:text-6xl font-bold text-center mb-6 `}>
-      Your{" "}
-      <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-        AI-Powered
-      </span>{" "}
-      Marketing Team
-    </h1>
+          {/* Subheading */}
+          <div className="text-center mb-8">
+            <Badge
+              variant="outline"
+              className="bg-purple-50 text-purple-700 border-purple-200 mb-4"
+            >
+              <Sparkles className="w-3 h-3 mr-2" />
+              Save 85% of manual effort
+            </Badge>
+          </div>
 
-    {/* Description */}
-    <p className="text-lg text-gray-600 dark:text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-      Set up in minutes. Automate SEO, content, and campaigns without the busywork.
-    </p>
+          {/* Main Heading */}
+          <h1 className={`text-5xl sm:text-6xl font-bold text-center mb-6 `}>
+            Your{" "}
+            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              AI-Powered
+            </span>{" "}
+            Marketing Team
+          </h1>
 
-    {/* Social Proof */}
-    <div className="flex items-center justify-center gap-6 mb-12">
-      <div className="flex -space-x-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 border-2 border-white">
-          <img src="mug1.png" className="rounded-full" alt="mug1"></img>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 border-2 border-white">
-        <img src="mug2.png" className="rounded-full" alt="mug2"></img>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 border-2 border-white">
-        <img src="mug3.png" className="rounded-full" alt="mug3"></img>
-        </div>
-      </div>
+          {/* Description */}
+          <p className="text-lg text-gray-600 dark:text-gray-400 text-center mb-12 max-w-2xl mx-auto">
+            Set up in minutes. Automate SEO, content, and campaigns without the busywork.
+          </p>
 
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-bold">
-          31+
-        </span>
-        <span className="text-gray-600 dark:text-gray-400">
-          specialized AI agents built for growth
-        </span>
-      </div>
-    </div>
+          {/* Social Proof */}
+          <div className="flex items-center justify-center gap-6 mb-12">
+            <div className="flex -space-x-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-500 border-2 border-white">
+                <img src="mug1.png" className="rounded-full" alt="mug1"></img>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 border-2 border-white">
+                <img src="mug2.png" className="rounded-full" alt="mug2"></img>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-purple-500 border-2 border-white">
+                <img src="mug3.png" className="rounded-full" alt="mug3"></img>
+              </div>
+            </div>
 
-    <p className="text-xl mb-8 max-w-2xl mx-auto text-center">
-      Transform your business profile into compelling ad campaigns with AI.
-      Generate multiple ad variations, custom images, and copy that converts—
-      all tailored to your target audience.
-    </p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold">
+                31+
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                specialized AI agents built for growth
+              </span>
+            </div>
+          </div>
 
-    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-      <Button
-        size="lg"
-        className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
-        onClick={handleGetStarted}
-      >
-        Get Started Free
-        <ArrowRight className="w-5 h-5 ml-2" />
-      </Button>
+          <p className="text-xl mb-8 max-w-2xl mx-auto text-center">
+            Transform your business profile into compelling ad campaigns with AI.
+            Generate multiple ad variations, custom images, and copy that converts—
+            all tailored to your target audience.
+          </p>
 
-      <Button
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3"
+              onClick={handleGetStarted}
+            >
+              Get Started Free
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+
+            {/* <Button
         size="lg"
         variant="outline"
         className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0 hover:from-green-700 hover:to-emerald-700"
@@ -445,18 +445,20 @@ export default function Home() {
       >
         <MessageSquare className="w-5 h-5 mr-2" />
         Import WhatsApp Chats
-      </Button>
+      </Button> */}
 
-      <Button size="lg" variant="outline" className="px-8 py-3 bg-transparent">
-        Watch Demo
-      </Button>
-    </div>
+            <Button size="lg" className="px-8 py-3 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-800 hover:to-pink-800">
+              <a href="https://drive.google.com/file/d/1zqyMt-OdSPYnKIyYk5bor-KKKowzJfYy/view?usp=sharing">
+                Watch Demo
+                </a>
+            </Button>
+          </div>
 
-  </div>
-</section>
-<section className="py-20 px-4 sm:px-6 lg:px-8">
+        </div>
+      </section>
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-6xl">
-        <div className={`bg-white rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden`}>
+          <div className={`bg-white rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 overflow-hidden`}>
             {/* Dashboard Header */}
             <div className="bg-gradient-to-r from-gray-50 dark:from-slate-700 to-white dark:to-slate-800 p-6 border-b border-gray-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
@@ -541,7 +543,7 @@ export default function Home() {
         </div>
       </section>
 
-      
+
       {/* Features Section */}
       <section className={`py-16 px-4 relative z-10 ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
         <div className="absolute bottom-10 left-10 w-24 h-24 bg-gradient-to-tr from-pink-400 to-purple-400 rounded-full opacity-30 blur-xl animate-float"></div>
@@ -646,7 +648,7 @@ export default function Home() {
         </div>
       </section>
 
-     
+
       {/* pricing */}
       <section className="py-20 px-4">
         <p className="text-md text-center text-indigo-500 font-semibold bg-indigo-100 rounded-lg px-4 py-2 mb-4 w-fit mx-auto">Pricing</p>
@@ -658,7 +660,7 @@ export default function Home() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {plans.map((plan, index) => (
+            {plans.map( ( plan, index ) => (
               <Card
                 key={index}
                 className={`relative transition-all duration-300 rounded-2xl p-6 flex flex-col justify-between h-full border shadow-md hover:shadow-xl cursor-pointer
@@ -688,41 +690,41 @@ export default function Home() {
                   <ul
                     className={`space-y-3 text-md ${theme === 'dark' ? 'text-violet-200' : 'text-gray-700'}`}
                   >
-                    {plan.features.map((feature, idx) => (
+                    {plan.features.map( ( feature, idx ) => (
                       <li key={idx} className="flex items-center gap-3 text-left">
                         <CheckCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
                         <span className="flex-1">{feature}</span>
                       </li>
-                    ))}
+                    ) )}
                   </ul>
                 </CardContent>
 
                 <Button disabled={plan.price === 0} className="mt-auto bg-indigo-600 hover:bg-indigo-700 text-white" size="lg"
-                  onClick={() => handlePaymentCheckout(plan.price, plan.name)}>
+                  onClick={() => handlePaymentCheckout( plan.price, plan.name )}>
                   {plan.price === 0 ? "Current Plan" : plan.cta}
                 </Button>
               </Card>
-            ))}
+            ) )}
           </div>
         </div>
       </section>
-       {/* CTA */}
-       <section className="py-20 px-4 sm:px-6 lg:px-8">
+      {/* CTA */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="container mx-auto max-w-3xl">
           <div className="bg-[url('/img1.jpg')] bg-cover rounded-2xl p-12 text-center text-white">
             <h2 className="text-4xl font-bold mb-4">Ready to Transform Your Advertising?</h2>
             <p className="text-lg mb-8 text-purple-100">
               Join thousands of businesses creating high-converting ads with AI
             </p>
-          <Button
-            size="lg"
-            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
-            onClick={handleGetStarted}
-          >
-            Start Creating Ads Now
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-        </div>
+            <Button
+              size="lg"
+              className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
+              onClick={handleGetStarted}
+            >
+              Start Creating Ads Now
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </div>
         </div>
       </section>
       <Footer />

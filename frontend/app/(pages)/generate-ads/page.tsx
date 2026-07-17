@@ -35,7 +35,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import{ AdGenerationSkeleton} from "@/components/Loader/adGenerationSkeleton";
 interface BusinessProfile {
   id: number;
   businessName: string;
@@ -492,7 +492,8 @@ function GenerateAdsPage() {
                       className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                     >
                       {isGenerating ? (
-                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating ads (this may take 1-2 min)...</>
+                        // <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating ads (this may take 1-2 min)...</>
+                      <AdGenerationSkeleton/>
                       ) : (
                         <><Sparkles className="w-5 h-5 mr-2" />Generate 3 Image Ad Creatives</>
                       )}
