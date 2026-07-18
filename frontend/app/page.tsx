@@ -290,7 +290,19 @@ export default function Home() {
                 <NavbarLogo />
                 <NavItems
                   items={navItems}
-                  className={`${theme === "dark" ? "text-white" : "text-gray-900"}`}
+                  className={theme === "dark" ? "text-white" : "text-gray-900"}
+                  onItemClick={( item ) => {
+                    if (
+                      !isLoggedIn &&
+                      ( item.link === "/dashboard" ||
+                        item.link === "/campaign-studio" )
+                    ) {
+                      setShowAuth( true );
+                      return;
+                    }
+
+                    router.push( item.link );
+                  }}
                 />
               </div>
               <div className="flex items-center gap-x-4">
@@ -329,7 +341,20 @@ export default function Home() {
                   key={idx}
                   href={item.link}
                   className="block text-base font-medium text-neutral-700 dark:text-neutral-200 py-2"
-                  onClick={() => setIsOpen( false )}
+                  onClick={( e ) => {
+                    if (
+                      !isLoggedIn &&
+                      ( item.link === "/dashboard" ||
+                        item.link === "/campaign-studio" )
+                    ) {
+                      e.preventDefault();
+                      setShowAuth( true );
+                      setIsOpen( false );
+                      return;
+                    }
+
+                    setIsOpen( false );
+                  }}
                 >
                   {item.name}
                 </a>
@@ -450,7 +475,7 @@ export default function Home() {
             <Button size="lg" className="px-8 py-3 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-800 hover:to-pink-800">
               <a href="https://drive.google.com/file/d/1zqyMt-OdSPYnKIyYk5bor-KKKowzJfYy/view?usp=sharing">
                 Watch Demo
-                </a>
+              </a>
             </Button>
           </div>
 
