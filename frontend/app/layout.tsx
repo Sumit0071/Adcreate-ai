@@ -6,6 +6,8 @@ const geistSans = Geist( {
   variable: "--font-geist-sans",
   subsets: ["latin"],
 } );
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const geistMono = Geist_Mono( {
   variable: "--font-geist-mono",
@@ -29,6 +31,14 @@ export default function RootLayout( {
       >
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
           {children}
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            theme="colored"
+          />
         </GoogleOAuthProvider>
       </body>
     </html>
