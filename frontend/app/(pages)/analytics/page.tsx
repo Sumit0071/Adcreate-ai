@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import {
-  TrendingUp, Target, Eye, MousePointer, Share2, Download,
+  TrendingUp, Target, Eye, MousePointer, Share2,
   RefreshCw, BarChart3, Loader2, Globe, Users, Zap, ArrowUp, ArrowDown
 } from "lucide-react";
 import { getAnalyticsSummary, getPublishedPosts } from "@/app/api/businessProfile";
@@ -17,6 +17,18 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 import Link from "next/link";
+import { exportAnalyticsCSV } from "@/lib/exportCsv";
+import { exportAnalyticsPDF } from "@/lib/exportPdf";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import { Download, FileText, FileSpreadsheet, ChevronDown } from "lucide-react";
 
 interface AnalyticsSummary {
   totalPosts: number;
@@ -58,99 +70,99 @@ const PLATFORM_COLORS: Record<string, string> = {
 const CHART_COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#14b8a6", "#f59e0b"];
 
 // Mock trend data for visualization (real data in production would come from backend time-series)
-const generateTrendData = (days: number) => {
+const generateTrendData = ( days: number ) => {
   const data = [];
   const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    data.push({
-      date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      impressions: Math.floor(Math.random() * 500 + 100),
-      clicks: Math.floor(Math.random() * 50 + 5),
-      conversions: Math.floor(Math.random() * 10),
-    });
+  for ( let i = days - 1; i >= 0; i-- ) {
+    const date = new Date( now );
+    date.setDate( date.getDate() - i );
+    data.push( {
+      date: date.toLocaleDateString( "en-US", { month: "short", day: "numeric" } ),
+      impressions: Math.floor( Math.random() * 500 + 100 ),
+      clicks: Math.floor( Math.random() * 50 + 5 ),
+      conversions: Math.floor( Math.random() * 10 ),
+    } );
   }
   return data;
 };
 
 export default function AnalyticsPage() {
-  const [days, setDays] = useState("30");
-  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
-  const [platformBreakdown, setPlatformBreakdown] = useState<Record<string, PlatformStat>>({});
-  const [adPerformance, setAdPerformance] = useState<AdPerformance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [publishedPosts, setPublishedPosts] = useState<any[]>([]);
-  const [trendData, setTrendData] = useState(generateTrendData(30));
+  const [days, setDays] = useState( "30" );
+  const [summary, setSummary] = useState<AnalyticsSummary | null>( null );
+  const [platformBreakdown, setPlatformBreakdown] = useState<Record<string, PlatformStat>>( {} );
+  const [adPerformance, setAdPerformance] = useState<AdPerformance[]>( [] );
+  const [isLoading, setIsLoading] = useState( true );
+  const [publishedPosts, setPublishedPosts] = useState<any[]>( [] );
+  const [trendData, setTrendData] = useState( generateTrendData( 30 ) );
 
   const loadAnalytics = async () => {
-    setIsLoading(true);
+    setIsLoading( true );
     try {
-      const [analyticsData, postsData] = await Promise.all([
-        getAnalyticsSummary(parseInt(days)).catch(() => null),
-        getPublishedPosts().catch(() => null),
-      ]);
+      const [analyticsData, postsData] = await Promise.all( [
+        getAnalyticsSummary( parseInt( days ) ).catch( () => null ),
+        getPublishedPosts().catch( () => null ),
+      ] );
 
-      if (analyticsData?.success) {
-        setSummary(analyticsData.summary);
-        setPlatformBreakdown(analyticsData.platformBreakdown || {});
-        setAdPerformance(analyticsData.adPerformance || []);
+      if ( analyticsData?.success ) {
+        setSummary( analyticsData.summary );
+        setPlatformBreakdown( analyticsData.platformBreakdown || {} );
+        setAdPerformance( analyticsData.adPerformance || [] );
       } else {
         // Use demo data if backend returns empty or error
-        setSummary({
+        setSummary( {
           totalPosts: 12,
           totalImpressions: 36250,
           totalClicks: 982,
           totalConversions: 145,
           ctr: "2.71",
           conversionRate: "14.77",
-        });
-        setPlatformBreakdown({
+        } );
+        setPlatformBreakdown( {
           Facebook: { impressions: 15600, clicks: 421, conversions: 62, posts: 5 },
           Instagram: { impressions: 8200, clicks: 205, conversions: 38, posts: 3 },
           LinkedIn: { impressions: 9800, clicks: 294, conversions: 35, posts: 3 },
           Twitter: { impressions: 2650, clicks: 62, conversions: 10, posts: 1 },
-        });
-        setAdPerformance([
+        } );
+        setAdPerformance( [
           { postId: 1, adId: 1, platform: "Facebook", content: "Transform your business with AI-powered solutions...", businessName: "My Business", status: "PUBLISHED", publishedAt: new Date().toISOString(), impressions: 12500, clicks: 350, conversions: 45, ctr: "2.80" },
           { postId: 2, adId: 2, platform: "Instagram", content: "Discover the power of AI-driven advertising...", businessName: "My Business", status: "PUBLISHED", publishedAt: new Date().toISOString(), impressions: 8200, clicks: 164, conversions: 22, ctr: "2.00" },
           { postId: 3, adId: 3, platform: "LinkedIn", content: "Elevate your brand with data-driven campaigns...", businessName: "My Business", status: "SCHEDULED", publishedAt: new Date().toISOString(), impressions: 15600, clicks: 468, conversions: 78, ctr: "3.00" },
-        ]);
+        ] );
       }
 
-      if (postsData?.success) {
-        setPublishedPosts(postsData.posts || []);
+      if ( postsData?.success ) {
+        setPublishedPosts( postsData.posts || [] );
       }
 
-      setTrendData(generateTrendData(parseInt(days)));
-    } catch (error) {
-      console.error("Failed to load analytics:", error);
+      setTrendData( generateTrendData( parseInt( days ) ) );
+    } catch ( error ) {
+      console.error( "Failed to load analytics:", error );
     } finally {
-      setIsLoading(false);
+      setIsLoading( false );
     }
   };
 
-  useEffect(() => { loadAnalytics(); }, [days]);
+  useEffect( () => { loadAnalytics(); }, [days] );
 
-  const platformPieData = Object.entries(platformBreakdown).map(([platform, stats]) => ({
+  const platformPieData = Object.entries( platformBreakdown ).map( ( [platform, stats] ) => ( {
     name: platform,
     value: stats.impressions,
     clicks: stats.clicks,
     conversions: stats.conversions,
-  }));
+  } ) );
 
-  const platformBarData = Object.entries(platformBreakdown).map(([platform, stats]) => ({
+  const platformBarData = Object.entries( platformBreakdown ).map( ( [platform, stats] ) => ( {
     platform,
     impressions: stats.impressions,
     clicks: stats.clicks,
     conversions: stats.conversions,
-  }));
+  } ) );
 
-  const StatCard = ({
+  const StatCard = ( {
     title, value, subtitle, icon: Icon, color, trend
   }: {
     title: string; value: string | number; subtitle: string; icon: any; color: string; trend?: number;
-  }) => (
+  } ) => (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</CardTitle>
@@ -199,9 +211,63 @@ export default function AnalyticsPage() {
             <Button variant="outline" size="sm" onClick={loadAnalytics}>
               <RefreshCw className="w-4 h-4 mr-2" />Refresh
             </Button>
-            <Button size="sm" variant="outline">
-              <Download className="w-4 h-4 mr-2" />Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-10 gap-2 rounded-xl border-gray-200 bg-white shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+                >
+                  <Download className="h-4 w-4 text-indigo-600" />
+                  <span>Export</span>
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent
+                align="end"
+                className="w-60 rounded-xl border shadow-xl p-2"
+              >
+                <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Export Analytics
+                </DropdownMenuLabel>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={() =>
+                    exportAnalyticsPDF( summary, platformBreakdown, adPerformance )
+                  }
+                  className="rounded-lg cursor-pointer py-3"
+                >
+                  <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+                    <FileText className="h-5 w-5 text-red-600" />
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="font-medium">PDF Report</span>
+                    <span className="text-xs text-muted-foreground">
+                      Professional printable report
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => exportAnalyticsCSV( adPerformance )}
+                  className="rounded-lg cursor-pointer py-3"
+                >
+                  <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="font-medium">CSV Spreadsheet</span>
+                    <span className="text-xs text-muted-foreground">
+                      Open in Excel or Google Sheets
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link href="/dashboard">
               <Button size="sm" variant="ghost">← Dashboard</Button>
             </Link>
@@ -224,11 +290,11 @@ export default function AnalyticsPage() {
                 subtitle="across all platforms" icon={Globe} color="bg-indigo-500" trend={12}
               />
               <StatCard
-                title="Impressions" value={(summary?.totalImpressions || 0).toLocaleString()}
+                title="Impressions" value={( summary?.totalImpressions || 0 ).toLocaleString()}
                 subtitle="total ad views" icon={Eye} color="bg-blue-500" trend={18}
               />
               <StatCard
-                title="Clicks" value={(summary?.totalClicks || 0).toLocaleString()}
+                title="Clicks" value={( summary?.totalClicks || 0 ).toLocaleString()}
                 subtitle="link clicks" icon={MousePointer} color="bg-purple-500" trend={8}
               />
               <StatCard
@@ -286,11 +352,11 @@ export default function AnalyticsPage() {
                       <ResponsiveContainer width="100%" height={280}>
                         <PieChart>
                           <Pie data={platformPieData} cx="50%" cy="50%" outerRadius={100}
-                            dataKey="value" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                            {platformPieData.map((entry, index) => (
+                            dataKey="value" nameKey="name" label={( { name, percent } ) => `${name} ${( percent * 100 ).toFixed( 0 )}%`}>
+                            {platformPieData.map( ( entry, index ) => (
                               <Cell key={entry.name}
                                 fill={PLATFORM_COLORS[entry.name] || CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
+                            ) )}
                           </Pie>
                           <Tooltip />
                         </PieChart>
@@ -308,8 +374,8 @@ export default function AnalyticsPage() {
                           <YAxis tick={{ fontSize: 11 }} />
                           <Tooltip />
                           <Legend />
-                          <Bar dataKey="clicks" fill="#6366f1" name="Clicks" radius={[4,4,0,0]} />
-                          <Bar dataKey="conversions" fill="#ec4899" name="Conversions" radius={[4,4,0,0]} />
+                          <Bar dataKey="clicks" fill="#6366f1" name="Clicks" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="conversions" fill="#ec4899" name="Conversions" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -320,7 +386,7 @@ export default function AnalyticsPage() {
                     <CardHeader><CardTitle>Platform Summary</CardTitle></CardHeader>
                     <CardContent>
                       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {Object.entries(platformBreakdown).map(([platform, stats]) => (
+                        {Object.entries( platformBreakdown ).map( ( [platform, stats] ) => (
                           <div key={platform} className="border rounded-xl p-4 space-y-3">
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[platform] || "#6366f1" }} />
@@ -331,12 +397,12 @@ export default function AnalyticsPage() {
                               <div className="flex justify-between"><span className="text-gray-500">Impressions</span><span className="font-medium">{stats.impressions.toLocaleString()}</span></div>
                               <div className="flex justify-between"><span className="text-gray-500">Clicks</span><span className="font-medium">{stats.clicks}</span></div>
                               <div className="flex justify-between"><span className="text-gray-500">CTR</span><span className="font-medium text-green-600">
-                                {stats.impressions > 0 ? ((stats.clicks / stats.impressions) * 100).toFixed(2) : 0}%
+                                {stats.impressions > 0 ? ( ( stats.clicks / stats.impressions ) * 100 ).toFixed( 2 ) : 0}%
                               </span></div>
                               <div className="flex justify-between"><span className="text-gray-500">Conversions</span><span className="font-medium text-indigo-600">{stats.conversions}</span></div>
                             </div>
                           </div>
-                        ))}
+                        ) )}
                       </div>
                     </CardContent>
                   </Card>
@@ -367,7 +433,7 @@ export default function AnalyticsPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {adPerformance.map((ad) => (
+                        {adPerformance.map( ( ad ) => (
                           <div key={ad.postId} className="border rounded-xl p-5 hover:shadow-md transition-shadow">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                               <div className="flex-1">
@@ -402,14 +468,14 @@ export default function AnalyticsPage() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant={parseFloat(ad.ctr) > 2.5 ? "default" : parseFloat(ad.ctr) > 1.5 ? "secondary" : "outline"}
-                                  className={parseFloat(ad.ctr) > 2.5 ? "bg-green-600 text-white" : ""}>
-                                  {parseFloat(ad.ctr) > 2.5 ? "🔥 High Performer" : parseFloat(ad.ctr) > 1.5 ? "Good" : "Needs Boost"}
+                                <Badge variant={parseFloat( ad.ctr ) > 2.5 ? "default" : parseFloat( ad.ctr ) > 1.5 ? "secondary" : "outline"}
+                                  className={parseFloat( ad.ctr ) > 2.5 ? "bg-green-600 text-white" : ""}>
+                                  {parseFloat( ad.ctr ) > 2.5 ? "🔥 High Performer" : parseFloat( ad.ctr ) > 1.5 ? "Good" : "Needs Boost"}
                                 </Badge>
                               </div>
                             </div>
                           </div>
-                        ))}
+                        ) )}
                       </div>
                     )}
                   </CardContent>
@@ -428,24 +494,24 @@ export default function AnalyticsPage() {
                             { stage: "Impressions", value: summary.totalImpressions, color: "bg-blue-500", pct: 100 },
                             {
                               stage: "Clicks", value: summary.totalClicks, color: "bg-purple-500",
-                              pct: summary.totalImpressions > 0 ? (summary.totalClicks / summary.totalImpressions) * 100 : 0
+                              pct: summary.totalImpressions > 0 ? ( summary.totalClicks / summary.totalImpressions ) * 100 : 0
                             },
                             {
                               stage: "Conversions", value: summary.totalConversions, color: "bg-green-500",
-                              pct: summary.totalClicks > 0 ? (summary.totalConversions / summary.totalClicks) * 100 : 0
+                              pct: summary.totalClicks > 0 ? ( summary.totalConversions / summary.totalClicks ) * 100 : 0
                             },
-                          ].map((item, idx) => (
+                          ].map( ( item, idx ) => (
                             <div key={item.stage}>
                               <div className="flex justify-between text-sm mb-1">
                                 <span className="font-medium">{item.stage}</span>
-                                <span className="text-gray-500">{item.value.toLocaleString()} ({item.pct.toFixed(2)}%)</span>
+                                <span className="text-gray-500">{item.value.toLocaleString()} ({item.pct.toFixed( 2 )}%)</span>
                               </div>
                               <div className="w-full bg-gray-100 rounded-full h-3">
                                 <div className={`${item.color} rounded-full h-3 transition-all duration-500`}
-                                  style={{ width: `${Math.max(item.pct, 2)}%` }} />
+                                  style={{ width: `${Math.max( item.pct, 2 )}%` }} />
                               </div>
                             </div>
-                          ))}
+                          ) )}
                         </div>
                       )}
                     </CardContent>
@@ -462,7 +528,7 @@ export default function AnalyticsPage() {
                         <p className="text-sm text-green-700 dark:text-green-400">
                           Your LinkedIn ads have the highest CTR at {
                             platformBreakdown["LinkedIn"]?.impressions > 0
-                              ? ((platformBreakdown["LinkedIn"]?.clicks / platformBreakdown["LinkedIn"]?.impressions) * 100).toFixed(2)
+                              ? ( ( platformBreakdown["LinkedIn"]?.clicks / platformBreakdown["LinkedIn"]?.impressions ) * 100 ).toFixed( 2 )
                               : "3.00"
                           }%
                         </p>

@@ -3,7 +3,7 @@ import isAuthenticated from "../middleware/authMiddleware";
 import {
   publishAd,
   getPublishedPosts,
-  trackAnalyticsEvent,
+  // trackAnalyticsEvent, // keep commented unless you re-enable/export it
   getAnalyticsSummary,
   getConnectUrl,
   getConnectedAccounts,
@@ -23,8 +23,10 @@ router.route("/publish").post(isAuthenticated, publishAd);
 router.route("/posts").get(isAuthenticated, getPublishedPosts);
 
 // ── Analytics ─────────────────────────────────────────────────────────────
-router.route("/track").post(trackAnalyticsEvent);
+// router.route("/track").post(trackAnalyticsEvent); // ENABLE ONLY if exported
 router.route("/analytics").get(isAuthenticated, getAnalyticsSummary);
-router.route("/zernio-analytics/:postId").get(isAuthenticated, getZernioPostAnalytics);
+
+// IMPORTANT: route param name must match controller logic
+router.route("/zernio-analytics/:externalPostId").get(isAuthenticated, getZernioPostAnalytics);
 
 export default router;
